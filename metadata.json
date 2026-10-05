@@ -1,0 +1,6 @@
+{
+  "name": "Cheran Foods — Artisanal Ice Cream Parlor & Stock Manager",
+  "description": "Official storefront, interactive rupee menu, customer star-rating feedback, and live inventory & price management dashboard for Cheran Foods ice cream shop.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

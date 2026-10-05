@@ -1,0 +1,250 @@
+{
+  "entities": {
+    "MenuItem": {
+      "title": "MenuItem",
+      "description": "Represents an ice cream product in the Cheran Foods menu with INR price and live stock details.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name of the ice cream item.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "category": {
+          "type": "string",
+          "description": "Menu category grouping.",
+          "enum": ["Sticks & Bars", "Cups", "Cones", "Ice Cream Balls"]
+        },
+        "flavor": {
+          "type": "string",
+          "description": "Primary flavor profile of the item.",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "description": {
+          "type": "string",
+          "description": "Tasting notes and serving description.",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "priceInr": {
+          "type": "number",
+          "description": "Price in Indian Rupees (INR)."
+        },
+        "stockCount": {
+          "type": "number",
+          "description": "Current available inventory quantity in units."
+        },
+        "lowStockThreshold": {
+          "type": "number",
+          "description": "Unit threshold below which low-stock alert triggers."
+        },
+        "unitLabel": {
+          "type": "string",
+          "description": "Serving unit label such as stick, cup, cone, or ball.",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "imageKey": {
+          "type": "string",
+          "description": "Key mapping to the curated studio product photograph.",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "isAvailable": {
+          "type": "boolean",
+          "description": "Whether the item is currently available for ordering."
+        },
+        "updatedByUid": {
+          "type": "string",
+          "description": "UID of the admin who last modified this menu item.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modification server timestamp."
+        }
+      },
+      "required": [
+        "name",
+        "category",
+        "flavor",
+        "description",
+        "priceInr",
+        "stockCount",
+        "lowStockThreshold",
+        "unitLabel",
+        "imageKey",
+        "isAvailable",
+        "updatedByUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "Customer review and star rating (1 to 5 stars) for Cheran Foods ice cream.",
+      "type": "object",
+      "properties": {
+        "customerName": {
+          "type": "string",
+          "description": "Display name of the customer leaving feedback.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "favoriteItem": {
+          "type": "string",
+          "description": "Name of the ice cream item tasted by the customer.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "rating": {
+          "type": "number",
+          "description": "Star rating from 1 to 5."
+        },
+        "comment": {
+          "type": "string",
+          "description": "Written review describing taste, quality, and experience.",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "authorUid": {
+          "type": "string",
+          "description": "Authenticated user UID of the reviewer.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        }
+      },
+      "required": [
+        "customerName",
+        "favoriteItem",
+        "rating",
+        "comment",
+        "authorUid",
+        "createdAt"
+      ]
+    },
+    "StockLog": {
+      "title": "StockLog",
+      "description": "Audit log entry recorded when an admin adds stock or modifies prices.",
+      "type": "object",
+      "properties": {
+        "itemId": {
+          "type": "string",
+          "description": "ID of the menu item updated.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Snapshot name of the menu item.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "actionType": {
+          "type": "string",
+          "description": "Type of inventory or pricing modification.",
+          "enum": ["RESTOCK", "PRICE_UPDATE", "STOCK_ADJUST", "NEW_ITEM"]
+        },
+        "previousPriceInr": {
+          "type": "number",
+          "description": "Previous price in INR."
+        },
+        "newPriceInr": {
+          "type": "number",
+          "description": "Updated price in INR."
+        },
+        "previousStock": {
+          "type": "number",
+          "description": "Previous stock count."
+        },
+        "newStock": {
+          "type": "number",
+          "description": "Updated stock count."
+        },
+        "note": {
+          "type": "string",
+          "description": "Batch note or supplier reference.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "adminUid": {
+          "type": "string",
+          "description": "UID of the admin who performed the change.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        }
+      },
+      "required": [
+        "itemId",
+        "itemName",
+        "actionType",
+        "previousPriceInr",
+        "newPriceInr",
+        "previousStock",
+        "newStock",
+        "note",
+        "adminUid",
+        "createdAt"
+      ]
+    },
+    "AdminRole": {
+      "title": "AdminRole",
+      "description": "Document granting administrative privileges to a user UID.",
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "Role identifier.",
+          "enum": ["admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        }
+      },
+      "required": ["role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/menuItems/{itemId}": {
+      "schema": { "$ref": "#/entities/MenuItem" },
+      "description": "Storefront menu items with INR prices and real-time stock quantities."
+    },
+    "/feedbacks/{feedbackId}": {
+      "schema": { "$ref": "#/entities/Feedback" },
+      "description": "Customer star ratings and written feedback entries."
+    },
+    "/stockLogs/{logId}": {
+      "schema": { "$ref": "#/entities/StockLog" },
+      "description": "Admin ledger tracking stock additions and price modifications."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminRole" },
+      "description": "Trusted admin role registry indexed by user UID."
+    }
+  }
+}

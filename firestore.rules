@@ -1,0 +1,286 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // Hardened Global Primitives
+    // =========================================================================
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'lalithmurugan57@gmail.com'
+      );
+    }
+
+    // =========================================================================
+    // Validation Blueprints (Anti-Update-Gap)
+    // =========================================================================
+    function isValidMenuItem(data) {
+      return data.keys().hasAll([
+        'name',
+        'category',
+        'flavor',
+        'description',
+        'priceInr',
+        'stockCount',
+        'lowStockThreshold',
+        'unitLabel',
+        'imageKey',
+        'isAvailable',
+        'updatedByUid',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'name',
+        'category',
+        'flavor',
+        'description',
+        'priceInr',
+        'stockCount',
+        'lowStockThreshold',
+        'unitLabel',
+        'imageKey',
+        'isAvailable',
+        'updatedByUid',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+      data.category is string && (
+        data.category == 'Sticks & Bars' ||
+        data.category == 'Cups' ||
+        data.category == 'Cones' ||
+        data.category == 'Ice Cream Balls'
+      ) &&
+      data.flavor is string && data.flavor.size() >= 1 && data.flavor.size() <= 60 &&
+      data.description is string && data.description.size() >= 1 && data.description.size() <= 300 &&
+      data.priceInr is number && data.priceInr > 0 && data.priceInr <= 10000 &&
+      data.stockCount is int && data.stockCount >= 0 && data.stockCount <= 100000 &&
+      data.lowStockThreshold is int && data.lowStockThreshold >= 0 && data.lowStockThreshold <= 10000 &&
+      data.unitLabel is string && data.unitLabel.size() >= 1 && data.unitLabel.size() <= 30 &&
+      data.imageKey is string && data.imageKey.size() >= 1 && data.imageKey.size() <= 60 &&
+      data.isAvailable is bool &&
+      data.updatedByUid is string && data.updatedByUid.size() >= 1 && data.updatedByUid.size() <= 128 &&
+      data.updatedByUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.updatedByUid == request.auth.uid &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidFeedback(data) {
+      return data.keys().hasAll([
+        'customerName',
+        'favoriteItem',
+        'rating',
+        'comment',
+        'authorUid',
+        'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'customerName',
+        'favoriteItem',
+        'rating',
+        'comment',
+        'authorUid',
+        'createdAt'
+      ]) &&
+      data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 80 &&
+      data.favoriteItem is string && data.favoriteItem.size() >= 1 && data.favoriteItem.size() <= 80 &&
+      data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+      data.comment is string && data.comment.size() >= 1 && data.comment.size() <= 600 &&
+      data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128 &&
+      data.authorUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.authorUid == request.auth.uid &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidStockLog(data) {
+      return data.keys().hasAll([
+        'itemId',
+        'itemName',
+        'actionType',
+        'previousPriceInr',
+        'newPriceInr',
+        'previousStock',
+        'newStock',
+        'note',
+        'adminUid',
+        'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'itemId',
+        'itemName',
+        'actionType',
+        'previousPriceInr',
+        'newPriceInr',
+        'previousStock',
+        'newStock',
+        'note',
+        'adminUid',
+        'createdAt'
+      ]) &&
+      data.itemId is string && data.itemId.size() >= 1 && data.itemId.size() <= 128 &&
+      data.itemId.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.itemName is string && data.itemName.size() >= 1 && data.itemName.size() <= 80 &&
+      data.actionType is string && (
+        data.actionType == 'RESTOCK' ||
+        data.actionType == 'PRICE_UPDATE' ||
+        data.actionType == 'STOCK_ADJUST' ||
+        data.actionType == 'NEW_ITEM'
+      ) &&
+      data.previousPriceInr is number && data.previousPriceInr >= 0 && data.previousPriceInr <= 10000 &&
+      data.newPriceInr is number && data.newPriceInr > 0 && data.newPriceInr <= 10000 &&
+      data.previousStock is int && data.previousStock >= 0 && data.previousStock <= 100000 &&
+      data.newStock is int && data.newStock >= 0 && data.newStock <= 100000 &&
+      data.note is string && data.note.size() >= 1 && data.note.size() <= 200 &&
+      data.adminUid is string && data.adminUid.size() >= 1 && data.adminUid.size() <= 128 &&
+      data.adminUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.adminUid == request.auth.uid &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidAdminRole(data) {
+      return data.keys().hasAll(['role', 'createdAt']) &&
+      data.keys().hasOnly(['role', 'createdAt']) &&
+      data.role is string && data.role == 'admin' &&
+      data.createdAt is timestamp;
+    }
+
+    // =========================================================================
+    // Collection Rules
+    // =========================================================================
+
+    // 1. Menu Items (/menuItems/{itemId})
+    match /menuItems/{itemId} {
+      allow get: if isValidId(itemId) && (existing().priceInr > 0 || isAdmin());
+      allow list: if existing().priceInr > 0;
+
+      allow create: if isVerifiedUser() &&
+        isValidId(itemId) &&
+        isValidMenuItem(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isVerifiedUser() &&
+        isValidId(itemId) &&
+        isValidMenuItem(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          // Action 1: Stock & Price Update by Admin
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'priceInr',
+            'stockCount',
+            'lowStockThreshold',
+            'isAvailable',
+            'updatedByUid',
+            'updatedAt'
+          ])) ||
+          // Action 2: Full Details Update by Admin
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'name',
+            'category',
+            'flavor',
+            'description',
+            'priceInr',
+            'stockCount',
+            'lowStockThreshold',
+            'unitLabel',
+            'imageKey',
+            'isAvailable',
+            'updatedByUid',
+            'updatedAt'
+          ])) ||
+          isAdmin()
+        );
+
+      allow delete: if isAdmin() && isValidId(itemId);
+    }
+
+    // 2. Customer Feedback (/feedbacks/{feedbackId})
+    match /feedbacks/{feedbackId} {
+      allow get: if isValidId(feedbackId) && existing().rating >= 1 && existing().rating <= 5;
+      allow list: if existing().rating >= 1;
+
+      allow create: if isVerifiedUser() &&
+        isValidId(feedbackId) &&
+        isValidFeedback(incoming()) &&
+        incoming().createdAt == request.time;
+
+      allow update: if isVerifiedUser() &&
+        isValidId(feedbackId) &&
+        isValidFeedback(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().authorUid == existing().authorUid &&
+        (
+          (existing().authorUid == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'comment', 'favoriteItem'])) ||
+          isAdmin()
+        );
+
+      allow delete: if isVerifiedUser() &&
+        isValidId(feedbackId) &&
+        (existing().authorUid == request.auth.uid || isAdmin());
+    }
+
+    // 3. Stock & Price Audit Logs (/stockLogs/{logId})
+    match /stockLogs/{logId} {
+      allow get: if isAdmin() && isValidId(logId) && existing().adminUid == request.auth.uid;
+      allow list: if isAdmin() && existing().adminUid == request.auth.uid;
+
+      allow create: if isVerifiedUser() &&
+        isValidId(logId) &&
+        isValidStockLog(incoming()) &&
+        incoming().createdAt == request.time &&
+        isAdmin() &&
+        (
+          exists(/databases/$(database)/documents/menuItems/$(incoming().itemId)) ||
+          existsAfter(/databases/$(database)/documents/menuItems/$(incoming().itemId))
+        );
+
+      allow update, delete: if false;
+    }
+
+    // 4. Trusted Admin Registry (/admins/{adminUid})
+    match /admins/{adminUid} {
+      allow get: if isVerifiedUser() && isValidId(adminUid) && request.auth.uid == adminUid;
+      allow list: if false;
+
+      allow create: if isVerifiedUser() &&
+        isValidId(adminUid) &&
+        isValidAdminRole(incoming()) &&
+        incoming().createdAt == request.time &&
+        isAdmin();
+
+      allow update, delete: if false;
+    }
+  }
+}
