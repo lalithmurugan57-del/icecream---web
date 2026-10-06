@@ -7,16 +7,17 @@ on:
       - master
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 concurrency:
   group: "pages"
   cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -28,10 +29,29 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
+
+      - name: Ensure Firebase config file exists
+        run: |
+          if [ ! -f firebase-applet-config.json ]; then
+            cat << 'EOF' > firebase-applet-config.json
+          {
+            "projectId": "gen-lang-client-0258338360",
+            "appId": "1:363350290680:web:48301f42f9113705500b0d",
+            "apiKey": "AIzaSyDRi-QQd_kGET0Ttouuy3_q9c-hmYcSZ_s",
+            "authDomain": "gen-lang-client-0258338360.firebaseapp.com",
+            "firestoreDatabaseId": "ai-studio-d7ae5651-01b1-4d62-b283-ae5d0313ff27",
+            "storageBucket": "gen-lang-client-0258338360.firebasestorage.app",
+            "messagingSenderId": "363350290680",
+            "measurementId": "",
+            "oAuthClientId": "363350290680-bup7mk8sb7gu2ri9jjiaakmpfck6j8cv.apps.googleusercontent.com",
+            "recaptchaSiteKey": ""
+          }
+          EOF
+          fi
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build production bundle
         run: |

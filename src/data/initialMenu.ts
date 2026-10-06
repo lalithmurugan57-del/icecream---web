@@ -1,8 +1,16 @@
-import heroImg from '../assets/images/hero_cheran_icecream_1791217593477.jpg';
-import sticksImg from '../assets/images/item_fruit_sticks_1791217608442.jpg';
-import barsImg from '../assets/images/item_choco_mango_bars_1791217621616.jpg';
-import conesImg from '../assets/images/item_trio_cones_1791217646665.jpg';
-import ballsImg from '../assets/images/item_icecream_balls_1791217658348.jpg';
+const bundledImages = import.meta.glob<string>('../assets/images/*.{jpg,jpeg,png,webp}', {
+  eager: true,
+  import: 'default',
+});
+
+function resolveAssetImage(filename: string, fallbackPath: string): string {
+  for (const [key, url] of Object.entries(bundledImages)) {
+    if (key.endsWith(filename)) {
+      return url;
+    }
+  }
+  return fallbackPath;
+}
 
 export type MenuCategory = 'Sticks & Bars' | 'Cups' | 'Cones' | 'Ice Cream Balls';
 
@@ -74,11 +82,26 @@ export const BLUEPRINT_CONSTRAINTS = {
 } as const;
 
 export const PRODUCT_IMAGES: Record<'hero' | 'sticks' | 'bars' | 'cones' | 'balls', string> = {
-  hero: heroImg,
-  sticks: sticksImg,
-  bars: barsImg,
-  cones: conesImg,
-  balls: ballsImg,
+  hero: resolveAssetImage(
+    'hero_cheran_icecream_1791217593477.jpg',
+    '/src/assets/images/hero_cheran_icecream_1791217593477.jpg'
+  ),
+  sticks: resolveAssetImage(
+    'item_fruit_sticks_1791217608442.jpg',
+    '/src/assets/images/item_fruit_sticks_1791217608442.jpg'
+  ),
+  bars: resolveAssetImage(
+    'item_choco_mango_bars_1791217621616.jpg',
+    '/src/assets/images/item_choco_mango_bars_1791217621616.jpg'
+  ),
+  cones: resolveAssetImage(
+    'item_trio_cones_1791217646665.jpg',
+    '/src/assets/images/item_trio_cones_1791217646665.jpg'
+  ),
+  balls: resolveAssetImage(
+    'item_icecream_balls_1791217658348.jpg',
+    '/src/assets/images/item_icecream_balls_1791217658348.jpg'
+  ),
 };
 
 export const INITIAL_MENU_ITEMS: MenuItemData[] = [
