@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   ArrowRight,
   Check,
+  Lock,
   LogIn,
   LogOut,
   Search,
@@ -48,20 +49,66 @@ import {
 import { ProductImage } from './components/ProductImage';
 import { ConeBarConfigurator } from './components/ConeBarConfigurator';
 import { CustomerFeedbackSection } from './components/CustomerFeedbackSection';
-import { AdminDashboard } from './components/AdminDashboard';
 import { OrderTrayDrawer } from './components/OrderTrayDrawer';
+import { AdminPortalView } from './components/AdminPortalView';
+import { OrderRecord, ParlourInfoSection } from './components/ParlourInfoSection';
+import { OfflineIndicator, PWAInstallButton } from './components/PWAInstallButton';
+import { SEOHead } from './components/SEOHead';
 
 const LOCAL_STORAGE_MENU_KEY = 'cheran_foods_menu_v2';
 const LOCAL_STORAGE_FEEDBACK_KEY = 'cheran_foods_feedback_v1';
 const LOCAL_STORAGE_LOGS_KEY = 'cheran_foods_stock_logs_v1';
+const LOCAL_STORAGE_ORDERS_KEY = 'cheran_foods_orders_v1';
+
+function checkIsAdminUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hash = window.location.hash.toLowerCase();
+  const path = window.location.pathname.toLowerCase();
+  const params = new URLSearchParams(window.location.search);
+  return (
+    hash === '#/admin' ||
+    hash.startsWith('#/admin/') ||
+    path.endsWith('/admin') ||
+    params.get('portal') === 'admin'
+  );
+}
 
 export default function App() {
-  const [activeView, setActiveView] = useState<'STOREFRONT' | 'ADMIN'>('STOREFRONT');
+  const [isAdminRoute, setIsAdminRoute] = useState<boolean>(() =>
+    checkIsAdminUrl()
+  );
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
   const [isAdminRoleInDb, setIsAdminRoleInDb] = useState<boolean>(false);
 
-  // Menu, Feedbacks, and Stock Logs state (initialized immediately for zero-latency UX)
+  // Sync route state with URL hash / popstate
+  useEffect(() => {
+    const syncRoute = () => {
+      setIsAdminRoute(checkIsAdminUrl());
+    };
+    window.addEventListener('hashchange', syncRoute);
+    window.addEventListener('popstate', syncRoute);
+    return () => {
+      window.removeEventListener('hashchange', syncRoute);
+      window.removeEventListener('popstate', syncRoute);
+    };
+  }, []);
+
+  const navigateToAdminPortal = () => {
+    window.location.hash = '#/admin';
+    setIsAdminRoute(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const navigateToCustomerStorefront = () => {
+    if (window.location.hash.startsWith('#/admin')) {
+      window.location.hash = '';
+    }
+    setIsAdminRoute(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Menu, Feedbacks, Stock Logs, and Recent Orders state
   const [menuItems, setMenuItems] = useState<MenuItemData[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_MENU_KEY);
@@ -101,17 +148,63 @@ export default function App() {
     return INITIAL_STOCK_LOGS;
   });
 
+  const [recentOrders, setRecentOrders] = useState<OrderRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_ORDERS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // Ignore
+    }
+    return [
+      {
+        token: 'CF-1042',
+        customerName: 'Senthil Kumar',
+        phone: '+91 98400 12345',
+        fulfillment: 'PARLOR_PICKUP',
+        totalInr: 90,
+        itemsSummary: '1× Cone — Butterscotch (₹50), 2× Chocobar (₹40)',
+        createdAtLabel: '12 mins ago',
+      },
+    ];
+  });
+
   // Storefront Filter & Cart State
   const [selectedCategory, setSelectedCategory] = useState<
     MenuCategory | 'ALL' | 'LOW_STOCK'
   >('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'DEFAULT' | 'PRICE_ASC' | 'PRICE_DESC'>('DEFAULT');
+  const [sortBy, setSortBy] = useState<'DEFAULT' | 'PRICE_ASC' | 'PRICE_DESC'>(
+    'DEFAULT'
+  );
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
 
-  // Sync to localStorage as fallback cache
+  // Sync changes across separate browser tabs (e.g., Admin tab <-> Customer Storefront tab)
+  useEffect(() => {
+    const handleStorageSync = (e: StorageEvent) => {
+      try {
+        if (e.key === LOCAL_STORAGE_MENU_KEY && e.newValue) {
+          setMenuItems(JSON.parse(e.newValue));
+        } else if (e.key === LOCAL_STORAGE_FEEDBACK_KEY && e.newValue) {
+          setFeedbacks(JSON.parse(e.newValue));
+        } else if (e.key === LOCAL_STORAGE_LOGS_KEY && e.newValue) {
+          setStockLogs(JSON.parse(e.newValue));
+        } else if (e.key === LOCAL_STORAGE_ORDERS_KEY && e.newValue) {
+          setRecentOrders(JSON.parse(e.newValue));
+        }
+      } catch {
+        // Ignore parse error
+      }
+    };
+    window.addEventListener('storage', handleStorageSync);
+    return () => window.removeEventListener('storage', handleStorageSync);
+  }, []);
+
+  // Persist to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(LOCAL_STORAGE_MENU_KEY, JSON.stringify(menuItems));
@@ -122,7 +215,10 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(LOCAL_STORAGE_FEEDBACK_KEY, JSON.stringify(feedbacks));
+      localStorage.setItem(
+        LOCAL_STORAGE_FEEDBACK_KEY,
+        JSON.stringify(feedbacks)
+      );
     } catch {
       // Ignore quota errors
     }
@@ -135,6 +231,17 @@ export default function App() {
       // Ignore quota errors
     }
   }, [stockLogs]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        LOCAL_STORAGE_ORDERS_KEY,
+        JSON.stringify(recentOrders)
+      );
+    } catch {
+      // Ignore quota errors
+    }
+  }, [recentOrders]);
 
   // Determine if current user has admin authority in Firestore
   const isCloudAdmin = Boolean(
@@ -168,7 +275,6 @@ export default function App() {
   useEffect(() => {
     if (!isAuthReady || !currentUser) return;
 
-    // Menu Items listener (Query Enforcer: where('priceInr', '>', 0))
     const menuQuery = query(
       collection(db, 'menuItems'),
       where('priceInr', '>', 0)
@@ -177,7 +283,6 @@ export default function App() {
       menuQuery,
       async (snapshot) => {
         if (snapshot.empty) {
-          // If signed in as bootstrapped admin and collection is empty, seed the 11 Cheran Foods items
           if (
             currentUser.emailVerified &&
             currentUser.email === BLUEPRINT_CONSTRAINTS.BOOTSTRAPPED_ADMIN_EMAIL
@@ -231,7 +336,6 @@ export default function App() {
           };
         });
 
-        // Sort in canonical parlor order (sticks -> cups -> bars -> cones -> balls)
         const orderMap = new Map(
           INITIAL_MENU_ITEMS.map((item, idx) => [item.id, idx])
         );
@@ -248,7 +352,6 @@ export default function App() {
       }
     );
 
-    // Feedbacks listener (Query Enforcer: where('rating', '>=', 1))
     const feedbackQuery = query(
       collection(db, 'feedbacks'),
       where('rating', '>=', 1)
@@ -377,6 +480,32 @@ export default function App() {
     fulfillment: 'PARLOR_PICKUP' | 'LOCAL_DELIVERY';
   }): Promise<string> => {
     const tokenNumber = `CF-${Math.floor(1000 + Math.random() * 9000)}`;
+    const totalInr = cart.reduce(
+      (sum, entry) => sum + entry.item.priceInr * entry.quantity,
+      0
+    );
+    const itemsSummary = cart
+      .map(
+        (entry) =>
+          `${entry.quantity}× ${entry.item.name} (₹${
+            entry.item.priceInr * entry.quantity
+          })`
+      )
+      .join(', ');
+
+    // Record order for customer token lookup
+    setRecentOrders((prev) => [
+      {
+        token: tokenNumber,
+        customerName: customerDetails.name,
+        phone: customerDetails.phone,
+        fulfillment: customerDetails.fulfillment,
+        totalInr,
+        itemsSummary,
+        createdAtLabel: 'Just now',
+      },
+      ...prev,
+    ]);
 
     // Deduct ordered stock from menuItems locally
     const updatedMenu = menuItems.map((menuItem) => {
@@ -391,14 +520,16 @@ export default function App() {
     });
     setMenuItems(updatedMenu);
 
-    // If signed in as Cloud Admin, also persist stock deduction to Firestore
     if (isCloudAdmin && currentUser) {
       try {
         const batch = writeBatch(db);
         for (const ordered of cart) {
           const currentItem = menuItems.find((m) => m.id === ordered.item.id);
           if (!currentItem) continue;
-          const nextStock = Math.max(0, currentItem.stockCount - ordered.quantity);
+          const nextStock = Math.max(
+            0,
+            currentItem.stockCount - ordered.quantity
+          );
           const itemRef = doc(db, 'menuItems', currentItem.id);
           batch.set(
             itemRef,
@@ -426,7 +557,6 @@ export default function App() {
       }
     }
 
-    // Add audit entry for order fulfillment
     const newLogs: StockLogData[] = cart.map((ordered, idx) => ({
       id: `log-order-${Date.now()}-${idx}`,
       itemId: ordered.item.id,
@@ -464,7 +594,6 @@ export default function App() {
         ? 'RESTOCK'
         : 'STOCK_ADJUST';
 
-    // Update local state immediately
     setMenuItems((prev) =>
       prev.map((m) =>
         m.id === itemId
@@ -495,7 +624,6 @@ export default function App() {
     };
     setStockLogs((prev) => [newLogEntry, ...prev]);
 
-    // Sync to Firestore if signed in as Cloud Admin
     if (isCloudAdmin && currentUser) {
       try {
         const batch = writeBatch(db);
@@ -506,11 +634,17 @@ export default function App() {
           name: targetItem.name.slice(0, BLUEPRINT_CONSTRAINTS.ITEM_NAME_MAX),
           category: targetItem.category,
           flavor: targetItem.flavor.slice(0, BLUEPRINT_CONSTRAINTS.FLAVOR_MAX),
-          description: targetItem.description.slice(0, BLUEPRINT_CONSTRAINTS.DESC_MAX),
+          description: targetItem.description.slice(
+            0,
+            BLUEPRINT_CONSTRAINTS.DESC_MAX
+          ),
           priceInr: Number(newPriceInr),
           stockCount: Math.round(newStockCount),
           lowStockThreshold: Math.round(newLowStockThreshold),
-          unitLabel: targetItem.unitLabel.slice(0, BLUEPRINT_CONSTRAINTS.UNIT_LABEL_MAX),
+          unitLabel: targetItem.unitLabel.slice(
+            0,
+            BLUEPRINT_CONSTRAINTS.UNIT_LABEL_MAX
+          ),
           imageKey: targetItem.imageKey,
           isAvailable: Boolean(newIsAvailable),
           updatedByUid: currentUser.uid,
@@ -520,7 +654,10 @@ export default function App() {
 
         batch.set(logRef, {
           itemId: targetItem.id,
-          itemName: targetItem.name.slice(0, BLUEPRINT_CONSTRAINTS.ITEM_NAME_MAX),
+          itemName: targetItem.name.slice(
+            0,
+            BLUEPRINT_CONSTRAINTS.ITEM_NAME_MAX
+          ),
           actionType,
           previousPriceInr: Number(targetItem.priceInr),
           newPriceInr: Number(newPriceInr),
@@ -585,11 +722,17 @@ export default function App() {
           name: createdItem.name.slice(0, BLUEPRINT_CONSTRAINTS.ITEM_NAME_MAX),
           category: createdItem.category,
           flavor: createdItem.flavor.slice(0, BLUEPRINT_CONSTRAINTS.FLAVOR_MAX),
-          description: createdItem.description.slice(0, BLUEPRINT_CONSTRAINTS.DESC_MAX),
+          description: createdItem.description.slice(
+            0,
+            BLUEPRINT_CONSTRAINTS.DESC_MAX
+          ),
           priceInr: Number(createdItem.priceInr),
           stockCount: Math.round(createdItem.stockCount),
           lowStockThreshold: Math.round(createdItem.lowStockThreshold),
-          unitLabel: createdItem.unitLabel.slice(0, BLUEPRINT_CONSTRAINTS.UNIT_LABEL_MAX),
+          unitLabel: createdItem.unitLabel.slice(
+            0,
+            BLUEPRINT_CONSTRAINTS.UNIT_LABEL_MAX
+          ),
           imageKey: createdItem.imageKey,
           isAvailable: Boolean(createdItem.isAvailable),
           updatedByUid: currentUser.uid,
@@ -599,7 +742,10 @@ export default function App() {
 
         batch.set(logRef, {
           itemId: slugId,
-          itemName: createdItem.name.slice(0, BLUEPRINT_CONSTRAINTS.ITEM_NAME_MAX),
+          itemName: createdItem.name.slice(
+            0,
+            BLUEPRINT_CONSTRAINTS.ITEM_NAME_MAX
+          ),
           actionType: 'NEW_ITEM',
           previousPriceInr: Number(createdItem.priceInr),
           newPriceInr: Number(createdItem.priceInr),
@@ -677,10 +823,8 @@ export default function App() {
       createdAtLabel: 'Just now',
     };
 
-    // Always update state immediately
     setFeedbacks((prev) => [newEntry, ...prev]);
 
-    // If signed in with verified email, persist to Firestore
     if (currentUser && currentUser.emailVerified) {
       try {
         await setDoc(doc(db, 'feedbacks', feedbackId), {
@@ -703,7 +847,11 @@ export default function App() {
 
   const handleDeleteFeedback = async (feedbackId: string) => {
     setFeedbacks((prev) => prev.filter((f) => f.id !== feedbackId));
-    if (currentUser && currentUser.emailVerified && !feedbackId.startsWith('fb-seed-')) {
+    if (
+      currentUser &&
+      currentUser.emailVerified &&
+      !feedbackId.startsWith('fb-seed-')
+    ) {
       try {
         await deleteDoc(doc(db, 'feedbacks', feedbackId));
       } catch (err) {
@@ -768,16 +916,52 @@ export default function App() {
     0
   );
 
+  // =========================================================================
+  // SEPARATE ADMIN PORTAL APPLICATION (/#/admin) — Locked by Username & Password
+  // =========================================================================
+  if (isAdminRoute) {
+    return (
+      <>
+        <SEOHead
+          menuItems={menuItems}
+          feedbacks={feedbacks}
+          isAdminRoute={true}
+        />
+        <OfflineIndicator />
+        <AdminPortalView
+          menuItems={menuItems}
+          stockLogs={stockLogs}
+          isCloudAdmin={isCloudAdmin}
+          currentUserEmail={currentUser?.email}
+          onSignInGoogle={handleSignIn}
+          onUpdateStockAndPrice={handleUpdateStockAndPrice}
+          onAddNewMenuItem={handleAddNewMenuItem}
+          onResetDefaultCatalog={handleResetDefaultCatalog}
+          onExitToStorefront={navigateToCustomerStorefront}
+        />
+      </>
+    );
+  }
+
+  // =========================================================================
+  // PUBLIC CUSTOMER STOREFRONT WEBSITE (Cheran Foods)
+  // =========================================================================
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#18181B]">
-      {/* Strict Top Bar Contract: 3 Zones (Single-element Brand, 4 Nav Links, 2 Primary Actions) */}
+      <SEOHead
+        menuItems={menuItems}
+        feedbacks={feedbacks}
+        isAdminRoute={false}
+      />
+      <OfflineIndicator />
+
+      {/* Strict Top Bar Contract: 3 Zones (Brand, 4 Customer Nav Links, Primary Actions) */}
       <header className="sticky top-0 z-40 h-16 bg-[#FAF8F5]/95 backdrop-blur-xs border-b border-[#E5E0D5] px-6 flex items-center justify-between">
         {/* Zone 1: Brand lockup with generated minimalist logo */}
         <a
           href="#top"
           onClick={(e) => {
             e.preventDefault();
-            setActiveView('STOREFRONT');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           className="flex items-center gap-2.5 font-display text-xl font-bold tracking-tight text-[#18181B] whitespace-nowrap"
@@ -792,48 +976,38 @@ export default function App() {
           <span>Cheran Foods</span>
         </a>
 
-        {/* Zone 2: 4 Clean Navigation Links */}
+        {/* Zone 2: 4 Clean Customer Navigation Links */}
         <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-[#57534E]">
           <a
             href="#ice-cream-menu"
-            onClick={() => setActiveView('STOREFRONT')}
-            className={`hover:text-[#18181B] hover:underline underline-offset-4 transition-colors whitespace-nowrap ${
-              activeView === 'STOREFRONT' ? 'text-[#18181B]' : ''
-            }`}
+            className="hover:text-[#18181B] hover:underline underline-offset-4 transition-colors whitespace-nowrap"
           >
             Ice Cream Menu
           </a>
           <a
             href="#cone-bar"
-            onClick={() => setActiveView('STOREFRONT')}
             className="hover:text-[#18181B] hover:underline underline-offset-4 transition-colors whitespace-nowrap"
           >
             Cone Flavours
           </a>
           <a
+            href="#parlour-story"
+            className="hover:text-[#18181B] hover:underline underline-offset-4 transition-colors whitespace-nowrap"
+          >
+            Parlour Info
+          </a>
+          <a
             href="#customer-feedback"
-            onClick={() => setActiveView('STOREFRONT')}
             className="hover:text-[#18181B] hover:underline underline-offset-4 transition-colors whitespace-nowrap"
           >
             Customer Ratings
           </a>
-          <button
-            type="button"
-            onClick={() =>
-              setActiveView((v) => (v === 'ADMIN' ? 'STOREFRONT' : 'ADMIN'))
-            }
-            className={`hover:text-[#18181B] hover:underline underline-offset-4 transition-colors whitespace-nowrap cursor-pointer ${
-              activeView === 'ADMIN'
-                ? 'text-[#C2410C] font-semibold underline'
-                : ''
-            }`}
-          >
-            Admin Dashboard
-          </button>
         </nav>
 
-        {/* Zone 3: 1–2 Primary Actions */}
-        <div className="flex items-center gap-3">
+        {/* Zone 3: Customer Actions (PWA Install, Google Sign-In, Order Tray) */}
+        <div className="flex items-center gap-2.5">
+          <PWAInstallButton />
+
           {currentUser ? (
             <button
               type="button"
@@ -869,453 +1043,415 @@ export default function App() {
         </div>
       </header>
 
-      {/* Mobile Sub-Navigation Bar for Quick Switching */}
-      <div className="md:hidden flex items-center justify-between px-4 py-2 bg-[#F5F1E8] border-b border-[#E5E0D5] text-xs font-medium">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => setActiveView('STOREFRONT')}
-            className={`${
-              activeView === 'STOREFRONT'
-                ? 'text-[#C2410C] font-semibold'
-                : 'text-[#57534E]'
-            }`}
-          >
-            Ice Cream Menu
-          </button>
-          <a
-            href="#customer-feedback"
-            onClick={() => setActiveView('STOREFRONT')}
-            className="text-[#57534E]"
-          >
-            Star Ratings
-          </a>
-        </div>
-        <button
-          type="button"
-          onClick={() =>
-            setActiveView((v) => (v === 'ADMIN' ? 'STOREFRONT' : 'ADMIN'))
-          }
-          className={`${
-            activeView === 'ADMIN'
-              ? 'text-[#C2410C] font-semibold'
-              : 'text-[#18181B]'
-          }`}
-        >
-          {activeView === 'ADMIN' ? '← Back to Shop' : 'Admin Dashboard →'}
-        </button>
-      </div>
-
-      {/* Main Content Area */}
+      {/* Main Customer Storefront Content */}
       <main className="flex-1">
-        {activeView === 'ADMIN' ? (
-          <AdminDashboard
-            menuItems={menuItems}
-            stockLogs={stockLogs}
-            isAdmin={isCloudAdmin}
-            currentUserEmail={currentUser?.email}
-            onSignIn={handleSignIn}
-            onUpdateStockAndPrice={handleUpdateStockAndPrice}
-            onAddNewMenuItem={handleAddNewMenuItem}
-            onResetDefaultCatalog={handleResetDefaultCatalog}
-          />
-        ) : (
-          <>
-            {/* Section 1: Storefront Hero Showcase */}
-            <section
-              id="top"
-              className="max-w-[1200px] mx-auto px-6 py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center"
+        {/* Section 1: Storefront Hero Showcase */}
+        <section
+          id="top"
+          className="max-w-[1200px] mx-auto px-6 py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center"
+        >
+          <div className="lg:col-span-6 space-y-6">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#78716C]">
+              <span className="font-medium text-[#C2410C]">
+                Artisanal Parlor & Cold Creamery
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>Fresh Daily Batches</span>
+              <span aria-hidden="true">·</span>
+              <span className="font-mono tabular-nums text-[#18181B]">
+                ₹10 to ₹50 Menu
+              </span>
+            </div>
+
+            <h1
+              className="text-3xl sm:text-5xl font-bold text-[#18181B] tracking-tight leading-[1.12]"
+              style={{ textWrap: 'balance' }}
             >
-              <div className="lg:col-span-6 space-y-6">
-                {/* Clean Unboxed Metadata */}
-                <div className="flex flex-wrap items-center gap-2 text-xs text-[#78716C]">
-                  <span className="font-medium text-[#C2410C]">
-                    Artisanal Parlor & Cold Creamery
-                  </span>
-                  <span aria-hidden="true">·</span>
-                  <span>Fresh Daily Batches</span>
-                  <span aria-hidden="true">·</span>
-                  <span className="font-mono tabular-nums text-[#18181B]">
-                    ₹10 to ₹50 Menu
-                  </span>
+              Handcrafted Fruit Sticks, Creamy Cups & Crunchy Cones.
+            </h1>
+
+            <p className="text-base text-[#57534E] leading-relaxed max-w-[58ch]">
+              Welcome to{' '}
+              <strong className="font-semibold text-[#18181B]">
+                Cheran Foods
+              </strong>
+              . From pocket-friendly ₹10 Grapes and Pineapple Sticks to ₹12 Vanilla Cups, ₹20 Chocobars and Mangobars, ₹30 Ice Cream Scoop Balls, and ₹50 Cones in Vanilla, Butterscotch, and Chocolate.
+            </p>
+
+            {/* Primary Customer CTAs */}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <a
+                href="#ice-cream-menu"
+                className="h-11 px-6 rounded-lg bg-[#C2410C] text-white text-sm font-medium hover:bg-[#9A3412] inline-flex items-center gap-2 whitespace-nowrap transition-colors"
+              >
+                <span>Order from Rupee Menu</span>
+                <ArrowRight className="w-4 h-4" />
+              </a>
+
+              <a
+                href="#cone-bar"
+                className="h-11 px-5 rounded-lg border border-[#D6D0C4] bg-[#FAF8F5] text-sm font-medium text-[#18181B] hover:bg-[#EFECE6] inline-flex items-center gap-2 whitespace-nowrap transition-colors"
+              >
+                <span>Build Your ₹50 Cone</span>
+              </a>
+            </div>
+
+            {/* Claim-to-Proof Adjacency: Quick Price & Rating Proof */}
+            <div className="pt-6 border-t border-[#E5E0D5] grid grid-cols-3 gap-6">
+              <div>
+                <div className="text-xl font-mono tabular-nums font-semibold text-[#18181B]">
+                  ₹10 – ₹50
                 </div>
-
-                <h1
-                  className="text-3xl sm:text-5xl font-bold text-[#18181B] tracking-tight leading-[1.12]"
-                  style={{ textWrap: 'balance' }}
-                >
-                  Handcrafted Fruit Sticks, Creamy Cups & Crunchy Cones.
-                </h1>
-
-                <p className="text-base text-[#57534E] leading-relaxed max-w-[58ch]">
-                  Welcome to <strong className="font-semibold text-[#18181B]">Cheran Foods</strong>. From pocket-friendly ₹10 Grapes and Pineapple Sticks to ₹12 Vanilla Cups, ₹20 Chocobars and Mangobars, ₹30 Ice Cream Scoop Balls, and ₹50 Cones in Vanilla, Butterscotch, and Chocolate.
-                </p>
-
-                {/* Primary Hero Action + Quick Route to Admin Stock Console */}
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <a
-                    href="#ice-cream-menu"
-                    className="h-11 px-6 rounded-lg bg-[#C2410C] text-white text-sm font-medium hover:bg-[#9A3412] inline-flex items-center gap-2 whitespace-nowrap transition-colors"
-                  >
-                    <span>Explore Rupee Menu</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </a>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('ADMIN')}
-                    className="h-11 px-5 rounded-lg border border-[#D6D0C4] bg-[#FAF8F5] text-sm font-medium text-[#18181B] hover:bg-[#EFECE6] inline-flex items-center gap-2 whitespace-nowrap cursor-pointer transition-colors"
-                  >
-                    <span>Manage Stock & Prices</span>
-                  </button>
-                </div>
-
-                {/* Claim-to-Proof Adjacency: Quick Price & Rating Proof */}
-                <div className="pt-6 border-t border-[#E5E0D5] grid grid-cols-3 gap-6">
-                  <div>
-                    <div className="text-xl font-mono tabular-nums font-semibold text-[#18181B]">
-                      ₹10 – ₹50
-                    </div>
-                    <div className="text-xs text-[#78716C] mt-0.5">
-                      Honest Indian Rupee Pricing
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xl font-mono tabular-nums font-semibold text-[#18181B]">
-                      {menuItems.length} Varieties
-                    </div>
-                    <div className="text-xs text-[#78716C] mt-0.5">
-                      Sticks, Cups, Cones & Balls
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xl font-mono tabular-nums font-semibold text-[#18181B] flex items-center gap-1">
-                      <span>4.8</span>
-                      <Star className="w-4 h-4 fill-[#D97706] text-[#D97706]" />
-                    </div>
-                    <div className="text-xs text-[#78716C] mt-0.5">
-                      Customer Star Rating
-                    </div>
-                  </div>
+                <div className="text-xs text-[#78716C] mt-0.5">
+                  Honest Indian Rupee Pricing
                 </div>
               </div>
-
-              {/* Hero 16:9 Studio Visual */}
-              <div className="lg:col-span-6">
-                <div className="aspect-[16/9] w-full rounded-xl overflow-hidden border border-[#E5E0D5] bg-[#F3EFE6] shadow-xs">
-                  <ProductImage
-                    imageKey="hero"
-                    alt="Cheran Foods Artisanal Ice Cream Counter Showcase"
-                    title="Cheran Foods Ice Cream Showcase"
-                    subtitle="Sticks · Cups · Cones · Ice Cream Balls"
-                    className="w-full h-full object-cover"
-                  />
+              <div>
+                <div className="text-xl font-mono tabular-nums font-semibold text-[#18181B]">
+                  {menuItems.length} Varieties
                 </div>
-
-                {/* Quick Menu Price Index Strip under Hero */}
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[#57534E] px-1">
-                  <span>Grapes & Pineapple Stick: <strong className="font-mono text-[#18181B]">₹10</strong></span>
-                  <span aria-hidden="true">·</span>
-                  <span>Vanilla Cup: <strong className="font-mono text-[#18181B]">₹12</strong></span>
-                  <span aria-hidden="true">·</span>
-                  <span>Chocobar & Mangobar: <strong className="font-mono text-[#18181B]">₹20</strong></span>
-                  <span aria-hidden="true">·</span>
-                  <span>Balls: <strong className="font-mono text-[#18181B]">₹30</strong></span>
-                  <span aria-hidden="true">·</span>
-                  <span>Cones: <strong className="font-mono text-[#18181B]">₹50</strong></span>
+                <div className="text-xs text-[#78716C] mt-0.5">
+                  Sticks, Cups, Cones & Balls
                 </div>
               </div>
-            </section>
-
-            {/* Section 2: Featured Ice Cream Menu Grid */}
-            <section
-              id="ice-cream-menu"
-              className="max-w-[1200px] mx-auto px-6 py-12 border-t border-[#E5E0D5] space-y-8"
-            >
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                  <div className="text-xs text-[#78716C] flex items-center gap-2 mb-1">
-                    <span>Cheran Foods Parlour Menu</span>
-                    <span aria-hidden="true">·</span>
-                    <span>All Prices in Indian Rupees (₹)</span>
-                  </div>
-                  <h2
-                    className="text-2xl sm:text-3xl font-semibold text-[#18181B] tracking-tight"
-                    style={{ textWrap: 'balance' }}
-                  >
-                    Complete Ice Cream Menu
-                  </h2>
+              <div>
+                <div className="text-xl font-mono tabular-nums font-semibold text-[#18181B] flex items-center gap-1">
+                  <span>4.8</span>
+                  <Star className="w-4 h-4 fill-[#D97706] text-[#D97706]" />
                 </div>
-
-                {/* Interactive Category Filter Controls + Search + Sort */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-1 p-1 bg-[#EFECE6] rounded-lg overflow-x-auto">
-                    {(
-                      [
-                        { key: 'ALL', label: 'All Items' },
-                        { key: 'Sticks & Bars', label: 'Sticks & Bars' },
-                        { key: 'Cups', label: 'Cups' },
-                        { key: 'Cones', label: 'Cones' },
-                        { key: 'Ice Cream Balls', label: 'Balls' },
-                        {
-                          key: 'LOW_STOCK',
-                          label: `Selling Fast (${lowStockItemsCount})`,
-                        },
-                      ] as const
-                    ).map((tab) => {
-                      const isLowTab = tab.key === 'LOW_STOCK';
-                      const active = selectedCategory === tab.key;
-                      return (
-                        <button
-                          key={tab.key}
-                          type="button"
-                          onClick={() => setSelectedCategory(tab.key)}
-                          className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors cursor-pointer ${
-                            active
-                              ? isLowTab
-                                ? 'bg-[#DC2626] text-white shadow-xs'
-                                : 'bg-[#FAF8F5] text-[#18181B] shadow-xs'
-                              : isLowTab
-                              ? 'text-[#DC2626] hover:bg-[#FEE2E2]/60 font-semibold'
-                              : 'text-[#57534E] hover:text-[#18181B]'
-                          }`}
-                        >
-                          {tab.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-[#78716C] absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search flavour..."
-                      className="h-9 pl-8 pr-3 w-40 sm:w-48 rounded-lg border border-[#D6D0C4] bg-[#FAF8F5] text-xs text-[#18181B] focus:outline-none focus:border-[#C2410C]"
-                    />
-                  </div>
-
-                  <select
-                    value={sortBy}
-                    onChange={(e) =>
-                      setSortBy(
-                        e.target.value as 'DEFAULT' | 'PRICE_ASC' | 'PRICE_DESC'
-                      )
-                    }
-                    aria-label="Sort menu items"
-                    className="h-9 px-2.5 rounded-lg border border-[#D6D0C4] bg-[#FAF8F5] text-xs text-[#18181B] focus:outline-none focus:border-[#C2410C]"
-                  >
-                    <option value="DEFAULT">Menu Order</option>
-                    <option value="PRICE_ASC">Price: Low to High (₹)</option>
-                    <option value="PRICE_DESC">Price: High to Low (₹)</option>
-                  </select>
+                <div className="text-xs text-[#78716C] mt-0.5">
+                  Customer Star Rating
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* 3-Column Product Grid (References/1_ecommerce_retail.md) */}
-              {displayedMenuItems.length === 0 ? (
-                <div className="py-14 text-center border border-dashed border-[#D6D0C4] rounded-xl space-y-2">
-                  <p className="text-sm font-medium text-[#18181B]">
-                    No ice cream items match your current filter
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategory('ALL');
-                      setSearchTerm('');
-                    }}
-                    className="text-xs font-medium text-[#C2410C] hover:underline cursor-pointer"
-                  >
-                    Reset menu filters
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
-                  {displayedMenuItems.map((item) => {
-                    const isSoldOut = !item.isAvailable || item.stockCount <= 0;
-                    const isLowStock =
-                      !isSoldOut && item.stockCount <= item.lowStockThreshold;
-                    const isRecentlyAdded = recentlyAddedId === item.id;
-                    const inCartEntry = cart.find((c) => c.item.id === item.id);
-                    const stockPercent =
-                      item.lowStockThreshold > 0
-                        ? Math.min(
-                            100,
-                            Math.max(
-                              12,
-                              Math.round(
-                                (item.stockCount / item.lowStockThreshold) * 100
-                              )
-                            )
+          {/* Hero 16:9 Studio Visual */}
+          <div className="lg:col-span-6">
+            <div className="aspect-[16/9] w-full rounded-xl overflow-hidden border border-[#E5E0D5] bg-[#F3EFE6] shadow-xs">
+              <ProductImage
+                imageKey="hero"
+                alt="Cheran Foods Artisanal Ice Cream Counter Showcase"
+                title="Cheran Foods Ice Cream Showcase"
+                subtitle="Sticks · Cups · Cones · Ice Cream Balls"
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Quick Menu Price Index Strip under Hero */}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[#57534E] px-1">
+              <span>
+                Grapes & Pineapple Stick:{' '}
+                <strong className="font-mono text-[#18181B]">₹10</strong>
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>
+                Vanilla Cup:{' '}
+                <strong className="font-mono text-[#18181B]">₹12</strong>
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>
+                Chocobar & Mangobar:{' '}
+                <strong className="font-mono text-[#18181B]">₹20</strong>
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>
+                Balls: <strong className="font-mono text-[#18181B]">₹30</strong>
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>
+                Cones: <strong className="font-mono text-[#18181B]">₹50</strong>
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 2: Featured Ice Cream Menu Grid */}
+        <section
+          id="ice-cream-menu"
+          className="max-w-[1200px] mx-auto px-6 py-12 border-t border-[#E5E0D5] space-y-8"
+        >
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <div className="text-xs text-[#78716C] flex items-center gap-2 mb-1">
+                <span>Cheran Foods Parlour Menu</span>
+                <span aria-hidden="true">·</span>
+                <span>All Prices in Indian Rupees (₹)</span>
+              </div>
+              <h2
+                className="text-2xl sm:text-3xl font-semibold text-[#18181B] tracking-tight"
+                style={{ textWrap: 'balance' }}
+              >
+                Complete Ice Cream Menu
+              </h2>
+            </div>
+
+            {/* Interactive Category Filter Controls + Search + Sort */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1 p-1 bg-[#EFECE6] rounded-lg overflow-x-auto">
+                {(
+                  [
+                    { key: 'ALL', label: 'All Items' },
+                    { key: 'Sticks & Bars', label: 'Sticks & Bars' },
+                    { key: 'Cups', label: 'Cups' },
+                    { key: 'Cones', label: 'Cones' },
+                    { key: 'Ice Cream Balls', label: 'Balls' },
+                    {
+                      key: 'LOW_STOCK',
+                      label: `Selling Fast (${lowStockItemsCount})`,
+                    },
+                  ] as const
+                ).map((tab) => {
+                  const isLowTab = tab.key === 'LOW_STOCK';
+                  const active = selectedCategory === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setSelectedCategory(tab.key)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors cursor-pointer ${
+                        active
+                          ? isLowTab
+                            ? 'bg-[#DC2626] text-white shadow-xs'
+                            : 'bg-[#FAF8F5] text-[#18181B] shadow-xs'
+                          : isLowTab
+                          ? 'text-[#DC2626] hover:bg-[#FEE2E2]/60 font-semibold'
+                          : 'text-[#57534E] hover:text-[#18181B]'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-[#78716C] absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search flavour..."
+                  className="h-9 pl-8 pr-3 w-40 sm:w-48 rounded-lg border border-[#D6D0C4] bg-[#FAF8F5] text-xs text-[#18181B] focus:outline-none focus:border-[#C2410C]"
+                />
+              </div>
+
+              <select
+                value={sortBy}
+                onChange={(e) =>
+                  setSortBy(
+                    e.target.value as 'DEFAULT' | 'PRICE_ASC' | 'PRICE_DESC'
+                  )
+                }
+                aria-label="Sort menu items"
+                className="h-9 px-2.5 rounded-lg border border-[#D6D0C4] bg-[#FAF8F5] text-xs text-[#18181B] focus:outline-none focus:border-[#C2410C]"
+              >
+                <option value="DEFAULT">Menu Order</option>
+                <option value="PRICE_ASC">Price: Low to High (₹)</option>
+                <option value="PRICE_DESC">Price: High to Low (₹)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* 3-Column Product Grid */}
+          {displayedMenuItems.length === 0 ? (
+            <div className="py-14 text-center border border-dashed border-[#D6D0C4] rounded-xl space-y-2">
+              <p className="text-sm font-medium text-[#18181B]">
+                No ice cream items match your current filter
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory('ALL');
+                  setSearchTerm('');
+                }}
+                className="text-xs font-medium text-[#C2410C] hover:underline cursor-pointer"
+              >
+                Reset menu filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+              {displayedMenuItems.map((item) => {
+                const isSoldOut = !item.isAvailable || item.stockCount <= 0;
+                const isLowStock =
+                  !isSoldOut && item.stockCount <= item.lowStockThreshold;
+                const isRecentlyAdded = recentlyAddedId === item.id;
+                const inCartEntry = cart.find((c) => c.item.id === item.id);
+                const stockPercent =
+                  item.lowStockThreshold > 0
+                    ? Math.min(
+                        100,
+                        Math.max(
+                          12,
+                          Math.round(
+                            (item.stockCount / item.lowStockThreshold) * 100
                           )
-                        : 50;
+                        )
+                      )
+                    : 50;
 
-                    return (
-                      <article
-                        key={item.id}
-                        className={`group rounded-xl border overflow-hidden flex flex-col justify-between transition-transform duration-150 hover:-translate-y-[2px] ${
-                          isLowStock
-                            ? 'border-[#DC2626] bg-[#FEF2F2]/45 ring-1 ring-[#DC2626]/20'
-                            : 'border-[#E5E0D5] bg-[#FAF8F5]'
+                return (
+                  <article
+                    key={item.id}
+                    className={`group rounded-xl border overflow-hidden flex flex-col justify-between transition-transform duration-150 hover:-translate-y-[2px] ${
+                      isLowStock
+                        ? 'border-[#DC2626] bg-[#FEF2F2]/45 ring-1 ring-[#DC2626]/20'
+                        : 'border-[#E5E0D5] bg-[#FAF8F5]'
+                    }`}
+                  >
+                    <div>
+                      <div
+                        className={`aspect-[4/3] w-full bg-[#F3EFE6] overflow-hidden border-b ${
+                          isLowStock ? 'border-[#DC2626]/30' : 'border-[#E5E0D5]'
                         }`}
                       >
-                        <div>
-                          {/* 4:3 Product Image (65%-75% visual lead) */}
-                          <div
-                            className={`aspect-[4/3] w-full bg-[#F3EFE6] overflow-hidden border-b ${
-                              isLowStock ? 'border-[#DC2626]/30' : 'border-[#E5E0D5]'
-                            }`}
-                          >
-                            <ProductImage
-                              imageKey={item.imageKey}
-                              alt={`${item.name} - ${item.flavor}`}
-                              title={item.name}
-                              subtitle={item.flavor}
-                              className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
-                            />
+                        <ProductImage
+                          imageKey={item.imageKey}
+                          alt={`${item.name} - ${item.flavor}`}
+                          title={item.name}
+                          subtitle={item.flavor}
+                          className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+                        />
+                      </div>
+
+                      <div className="p-5 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2 text-xs text-[#78716C]">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="uppercase tracking-wider">
+                              {item.category}
+                            </span>
+                            <span aria-hidden="true">·</span>
+                            <span className="truncate">{item.flavor}</span>
                           </div>
-
-                          {/* Card Body */}
-                          <div className="p-5 space-y-2.5">
-                            {/* Clean Unboxed Metadata (Zero-Pill Discipline) */}
-                            <div className="flex items-center justify-between gap-2 text-xs text-[#78716C]">
-                              <div className="flex items-center gap-1.5 truncate">
-                                <span className="uppercase tracking-wider">
-                                  {item.category}
-                                </span>
-                                <span aria-hidden="true">·</span>
-                                <span className="truncate">{item.flavor}</span>
-                              </div>
-                              <span
-                                className={`font-mono tabular-nums shrink-0 flex items-center gap-1 ${
-                                  isSoldOut
-                                    ? 'text-[#78716C] line-through'
-                                    : isLowStock
-                                    ? 'text-[#DC2626] font-semibold'
-                                    : 'text-[#57534E]'
-                                }`}
-                              >
-                                {isSoldOut ? (
-                                  <span>Sold Out</span>
-                                ) : isLowStock ? (
-                                  <>
-                                    <AlertTriangle className="w-3.5 h-3.5 text-[#DC2626] shrink-0" />
-                                    <span>Only {item.stockCount} left!</span>
-                                  </>
-                                ) : (
-                                  <span>{item.stockCount} in stock</span>
-                                )}
-                              </span>
-                            </div>
-
-                            {/* Title & Tabular INR Price */}
-                            <div className="flex items-baseline justify-between gap-3">
-                              <h3
-                                className={`text-base font-semibold ${
-                                  isLowStock ? 'text-[#991B1B]' : 'text-[#18181B]'
-                                }`}
-                              >
-                                {item.name}
-                              </h3>
-                              <span
-                                className={`text-lg font-mono tabular-nums font-semibold shrink-0 ${
-                                  isLowStock ? 'text-[#DC2626]' : 'text-[#18181B]'
-                                }`}
-                              >
-                                ₹{item.priceInr}
-                              </span>
-                            </div>
-
-                            <p className="text-xs text-[#57534E] leading-relaxed line-clamp-2">
-                              {item.description}
-                            </p>
-
-                            {/* Low-Stock Urgency Bar when stock drops below lowStockThreshold */}
-                            {isLowStock && (
-                              <div className="pt-1.5 space-y-1">
-                                <div className="flex items-center justify-between text-[11px] font-medium text-[#DC2626]">
-                                  <span>Low Stock · Selling Fast</span>
-                                  <span className="font-mono tabular-nums">
-                                    {item.stockCount} / {item.lowStockThreshold} threshold
-                                  </span>
-                                </div>
-                                <div className="w-full h-1.5 bg-[#FECACA] rounded-xs overflow-hidden">
-                                  <div
-                                    className="h-full bg-[#DC2626] transition-all duration-200"
-                                    style={{ width: `${stockPercent}%` }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Card Footer Action */}
-                        <div className="px-5 pb-5 pt-2 flex items-center justify-between gap-3">
                           <span
-                            className={`text-xs font-mono tabular-nums ${
-                              isLowStock ? 'text-[#991B1B] font-medium' : 'text-[#78716C]'
-                            }`}
-                          >
-                            {item.unitLabel}
-                            {inCartEntry ? ` · ${inCartEntry.quantity} in tray` : ''}
-                          </span>
-
-                          <button
-                            type="button"
-                            disabled={isSoldOut}
-                            onClick={() => handleAddToCart(item, 1)}
-                            className={`h-9 px-4 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                            className={`font-mono tabular-nums shrink-0 flex items-center gap-1 ${
                               isSoldOut
-                                ? 'bg-[#E5E0D5] text-[#78716C] cursor-not-allowed'
-                                : isRecentlyAdded
-                                ? 'bg-[#15803D] text-white'
+                                ? 'text-[#78716C] line-through'
                                 : isLowStock
-                                ? 'bg-[#DC2626] text-white hover:bg-[#B91C1C]'
-                                : 'bg-[#18181B] text-[#FAF8F5] hover:bg-[#C2410C]'
+                                ? 'text-[#DC2626] font-semibold'
+                                : 'text-[#57534E]'
                             }`}
                           >
-                            {isRecentlyAdded ? (
-                              <>
-                                <Check className="w-3.5 h-3.5" />
-                                <span>Added</span>
-                              </>
-                            ) : isSoldOut ? (
-                              <span>Out of Stock</span>
+                            {isSoldOut ? (
+                              <span>Sold Out</span>
                             ) : isLowStock ? (
-                              <span>Grab Now · ₹{item.priceInr}</span>
+                              <>
+                                <AlertTriangle className="w-3.5 h-3.5 text-[#DC2626] shrink-0" />
+                                <span>Only {item.stockCount} left!</span>
+                              </>
                             ) : (
-                              <span>Add to Tray · ₹{item.priceInr}</span>
+                              <span>{item.stockCount} in stock</span>
                             )}
-                          </button>
+                          </span>
                         </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
 
-            {/* Section 3: Signature Crunchy Cone Bar (Vanilla, Butterscotch, Chocolate at ₹50) */}
-            <ConeBarConfigurator
-              menuItems={menuItems}
-              onAddToCart={handleAddToCart}
-            />
+                        <div className="flex items-baseline justify-between gap-3">
+                          <h3
+                            className={`text-base font-semibold ${
+                              isLowStock ? 'text-[#991B1B]' : 'text-[#18181B]'
+                            }`}
+                          >
+                            {item.name}
+                          </h3>
+                          <span
+                            className={`text-lg font-mono tabular-nums font-semibold shrink-0 ${
+                              isLowStock ? 'text-[#DC2626]' : 'text-[#18181B]'
+                            }`}
+                          >
+                            ₹{item.priceInr}
+                          </span>
+                        </div>
 
-            {/* Section 4: Customer Feedback & Star Ratings */}
-            <CustomerFeedbackSection
-              feedbacks={feedbacks}
-              menuItems={menuItems}
-              currentUserUid={currentUser?.uid}
-              currentUserName={currentUser?.displayName}
-              isAdmin={isCloudAdmin}
-              onSubmitFeedback={handleSubmitFeedback}
-              onDeleteFeedback={handleDeleteFeedback}
-            />
-          </>
-        )}
+                        <p className="text-xs text-[#57534E] leading-relaxed line-clamp-2">
+                          {item.description}
+                        </p>
+
+                        {isLowStock && (
+                          <div className="pt-1.5 space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-medium text-[#DC2626]">
+                              <span>Low Stock · Selling Fast</span>
+                              <span className="font-mono tabular-nums">
+                                {item.stockCount} / {item.lowStockThreshold} threshold
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 bg-[#FECACA] rounded-xs overflow-hidden">
+                              <div
+                                className="h-full bg-[#DC2626] transition-all duration-200"
+                                style={{ width: `${stockPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="px-5 pb-5 pt-2 flex items-center justify-between gap-3">
+                      <span
+                        className={`text-xs font-mono tabular-nums ${
+                          isLowStock
+                            ? 'text-[#991B1B] font-medium'
+                            : 'text-[#78716C]'
+                        }`}
+                      >
+                        {item.unitLabel}
+                        {inCartEntry ? ` · ${inCartEntry.quantity} in tray` : ''}
+                      </span>
+
+                      <button
+                        type="button"
+                        disabled={isSoldOut}
+                        onClick={() => handleAddToCart(item, 1)}
+                        className={`h-9 px-4 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                          isSoldOut
+                            ? 'bg-[#E5E0D5] text-[#78716C] cursor-not-allowed'
+                            : isRecentlyAdded
+                            ? 'bg-[#15803D] text-white'
+                            : isLowStock
+                            ? 'bg-[#DC2626] text-white hover:bg-[#B91C1C]'
+                            : 'bg-[#18181B] text-[#FAF8F5] hover:bg-[#C2410C]'
+                        }`}
+                      >
+                        {isRecentlyAdded ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Added</span>
+                          </>
+                        ) : isSoldOut ? (
+                          <span>Out of Stock</span>
+                        ) : isLowStock ? (
+                          <span>Grab Now · ₹{item.priceInr}</span>
+                        ) : (
+                          <span>Add to Tray · ₹{item.priceInr}</span>
+                        )}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Section 3: Signature Crunchy Cone Bar (Vanilla, Butterscotch, Chocolate at ₹50) */}
+        <ConeBarConfigurator
+          menuItems={menuItems}
+          onAddToCart={handleAddToCart}
+        />
+
+        {/* Section 4: Parlour Craftsmanship, Order Token Tracker & Google Search Card */}
+        <ParlourInfoSection recentOrders={recentOrders} />
+
+        {/* Section 5: Customer Feedback & Star Ratings */}
+        <CustomerFeedbackSection
+          feedbacks={feedbacks}
+          menuItems={menuItems}
+          currentUserUid={currentUser?.uid}
+          currentUserName={currentUser?.displayName}
+          isAdmin={isCloudAdmin}
+          onSubmitFeedback={handleSubmitFeedback}
+          onDeleteFeedback={handleDeleteFeedback}
+        />
       </main>
 
       {/* Slide-Over Order Tray Drawer */}
@@ -1328,7 +1464,7 @@ export default function App() {
         onConfirmOrder={handleConfirmOrder}
       />
 
-      {/* Quiet Editorial Footer */}
+      {/* Quiet Editorial Footer with Separate Staff Portal Link (/#/admin) */}
       <footer className="border-t border-[#E5E0D5] bg-[#F5F1E8] py-8 px-6">
         <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#57534E]">
           <div className="flex flex-wrap items-center gap-2">
@@ -1342,26 +1478,24 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-5">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveView('STOREFRONT');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+            <a href="#ice-cream-menu" className="hover:text-[#18181B]">
+              Ice Cream Menu
+            </a>
+            <a href="#customer-feedback" className="hover:text-[#18181B]">
+              Customer Reviews
+            </a>
+            <a
+              href="#/admin"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToAdminPortal();
               }}
-              className="hover:text-[#18181B] cursor-pointer"
+              className="text-[#78716C] hover:text-[#18181B] inline-flex items-center gap-1 cursor-pointer"
+              title="Open Separate Password-Protected Staff Portal"
             >
-              Storefront Menu
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveView('ADMIN');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="hover:text-[#18181B] cursor-pointer"
-            >
-              Admin Stock & Price Console
-            </button>
+              <Lock className="w-3 h-3" />
+              <span>Staff Login (/#/admin)</span>
+            </a>
           </div>
         </div>
       </footer>

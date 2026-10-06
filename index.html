@@ -3,15 +3,166 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cheran Foods — Artisanal Ice Cream Parlor & Stock Manager</title>
-    <meta name="description" content="Official storefront, interactive rupee menu, customer star-rating feedback, and live inventory & price management dashboard for Cheran Foods ice cream shop." />
-    <meta property="og:title" content="Cheran Foods — Artisanal Ice Cream Parlor & Stock Manager" />
-    <meta property="og:description" content="Official storefront, interactive rupee menu, customer star-rating feedback, and live inventory & price management dashboard for Cheran Foods ice cream shop." />
+    <title>Cheran Foods – Artisanal Ice Cream Shop & Rupee Menu</title>
+    <meta
+      name="description"
+      content="Order fresh fruit sticks (₹10), vanilla cups (₹12), chocobars (₹20), ice cream balls (₹30), and crunchy cones (₹50) from Cheran Foods ice cream parlor."
+    />
+    <meta
+      name="keywords"
+      content="Cheran Foods, Cheran Foods ice cream, ice cream shop, grapes stick 10 rupees, pineapple stick, vanilla cup, chocobar, mangobar, butterscotch cone, chocolate cone, vanilla ball, strawberry ball, mango ball"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Cheran Foods" />
+    <meta name="theme-color" content="#C2410C" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="CheranFoods" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+
+    <!-- OpenGraph Social Cards -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Cheran Foods" />
+    <meta
+      property="og:title"
+      content="Cheran Foods – Artisanal Ice Cream Shop & Rupee Menu"
+    />
+    <meta
+      property="og:description"
+      content="Order fresh fruit sticks (₹10), vanilla cups (₹12), chocobars (₹20), ice cream balls (₹30), and crunchy cones (₹50) from Cheran Foods ice cream parlor."
+    />
+
+    <!-- Twitter / X Cards -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Cheran Foods – Artisanal Ice Cream Shop & Rupee Menu"
+    />
+    <meta
+      name="twitter:description"
+      content="Order fresh fruit sticks (₹10), vanilla cups (₹12), chocobars (₹20), ice cream balls (₹30), and crunchy cones (₹50) from Cheran Foods ice cream parlor."
+    />
+
+    <!-- Schema.org Structured Data (JSON-LD) for Google Search Rich Results -->
+    <script id="cheran-schema-ld" type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "IceCreamShop",
+        "name": "Cheran Foods",
+        "alternateName": "Cheran Foods Artisanal Ice Cream Parlor",
+        "description": "Order fresh fruit sticks (₹10), vanilla cups (₹12), chocobars (₹20), ice cream balls (₹30), and crunchy cones (₹50) from Cheran Foods ice cream parlor.",
+        "priceRange": "₹10 - ₹50",
+        "currenciesAccepted": "INR",
+        "paymentAccepted": "Cash, UPI",
+        "servesCuisine": "Ice Cream, Fruit Popsicles, Waffle Cones, Frozen Desserts",
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "reviewCount": "4",
+          "bestRating": "5",
+          "worstRating": "1"
+        },
+        "hasMenu": {
+          "@type": "Menu",
+          "name": "Cheran Foods Indian Rupee Ice Cream Menu",
+          "hasMenuSection": [
+            {
+              "@type": "MenuSection",
+              "name": "Sticks & Bars",
+              "hasMenuItem": [
+                {
+                  "@type": "MenuItem",
+                  "name": "Grapes Stick",
+                  "description": "Refreshing juicy black grape ice pop crafted with real fruit crush.",
+                  "offers": { "@type": "Offer", "price": "10", "priceCurrency": "INR" }
+                },
+                {
+                  "@type": "MenuItem",
+                  "name": "Pineapple Stick",
+                  "description": "Sun-ripened golden pineapple ice stick.",
+                  "offers": { "@type": "Offer", "price": "10", "priceCurrency": "INR" }
+                },
+                {
+                  "@type": "MenuItem",
+                  "name": "Chocobar",
+                  "description": "Velvety vanilla cream core dipped in dark chocolate shell.",
+                  "offers": { "@type": "Offer", "price": "20", "priceCurrency": "INR" }
+                },
+                {
+                  "@type": "MenuItem",
+                  "name": "Mangobar",
+                  "description": "Alphonso mango pulp jacket around a sweet dairy cream center.",
+                  "offers": { "@type": "Offer", "price": "20", "priceCurrency": "INR" }
+                }
+              ]
+            },
+            {
+              "@type": "MenuSection",
+              "name": "Cups & Ice Cream Balls",
+              "hasMenuItem": [
+                {
+                  "@type": "MenuItem",
+                  "name": "Vanilla Cup",
+                  "description": "Smooth rich dairy vanilla ice cream served in a parlor cup.",
+                  "offers": { "@type": "Offer", "price": "12", "priceCurrency": "INR" }
+                },
+                {
+                  "@type": "MenuItem",
+                  "name": "Vanilla Ball",
+                  "description": "Hand-scooped artisan Madagascar Vanilla ice cream ball.",
+                  "offers": { "@type": "Offer", "price": "30", "priceCurrency": "INR" }
+                },
+                {
+                  "@type": "MenuItem",
+                  "name": "Strawberry Ball",
+                  "description": "Creamy pink Strawberry ice cream ball.",
+                  "offers": { "@type": "Offer", "price": "30", "priceCurrency": "INR" }
+                },
+                {
+                  "@type": "MenuItem",
+                  "name": "Mango Ball",
+                  "description": "Rich golden Alphonso Mango ice cream ball.",
+                  "offers": { "@type": "Offer", "price": "30", "priceCurrency": "INR" }
+                }
+              ]
+            },
+            {
+              "@type": "MenuSection",
+              "name": "Crunchy Waffle Cones",
+              "hasMenuItem": [
+                {
+                  "@type": "MenuItem",
+                  "name": "Cone — Vanilla",
+                  "description": "Baked crunchy waffle cone topped with creamy Vanilla.",
+                  "offers": { "@type": "Offer", "price": "50", "priceCurrency": "INR" }
+                },
+                {
+                  "@type": "MenuItem",
+                  "name": "Cone — Butterscotch",
+                  "description": "Crispy waffle cone with golden Butterscotch and cashew praline.",
+                  "offers": { "@type": "Offer", "price": "50", "priceCurrency": "INR" }
+                },
+                {
+                  "@type": "MenuItem",
+                  "name": "Cone — Chocolate",
+                  "description": "Crunchy waffle cone loaded with Belgian dark Chocolate.",
+                  "offers": { "@type": "Offer", "price": "50", "priceCurrency": "INR" }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body class="bg-[#FAF8F5] text-[#18181B] antialiased selection:bg-[#C2410C]/15 selection:text-[#9A3412]">
     <div id="root"></div>

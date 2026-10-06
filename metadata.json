@@ -1,6 +1,6 @@
 {
-  "name": "Cheran Foods — Artisanal Ice Cream Parlor & Stock Manager",
-  "description": "Official storefront, interactive rupee menu, customer star-rating feedback, and live inventory & price management dashboard for Cheran Foods ice cream shop.",
+  "name": "Cheran Foods – Artisanal Ice Cream Shop & Rupee Menu",
+  "description": "Order fresh fruit sticks (₹10), vanilla cups (₹12), chocobars (₹20), ice cream balls (₹30), and crunchy cones (₹50) from Cheran Foods ice cream parlor.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
