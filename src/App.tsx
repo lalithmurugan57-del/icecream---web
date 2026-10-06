@@ -18,6 +18,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import {
+  AlertTriangle,
   ArrowRight,
   Check,
   LogIn,
@@ -50,7 +51,7 @@ import { CustomerFeedbackSection } from './components/CustomerFeedbackSection';
 import { AdminDashboard } from './components/AdminDashboard';
 import { OrderTrayDrawer } from './components/OrderTrayDrawer';
 
-const LOCAL_STORAGE_MENU_KEY = 'cheran_foods_menu_v1';
+const LOCAL_STORAGE_MENU_KEY = 'cheran_foods_menu_v2';
 const LOCAL_STORAGE_FEEDBACK_KEY = 'cheran_foods_feedback_v1';
 const LOCAL_STORAGE_LOGS_KEY = 'cheran_foods_stock_logs_v1';
 
@@ -101,7 +102,9 @@ export default function App() {
   });
 
   // Storefront Filter & Cart State
-  const [selectedCategory, setSelectedCategory] = useState<MenuCategory | 'ALL'>('ALL');
+  const [selectedCategory, setSelectedCategory] = useState<
+    MenuCategory | 'ALL' | 'LOW_STOCK'
+  >('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'DEFAULT' | 'PRICE_ASC' | 'PRICE_DESC'>('DEFAULT');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -713,10 +716,30 @@ export default function App() {
     }
   };
 
+  const lowStockItemsCount = useMemo(
+    () =>
+      menuItems.filter(
+        (item) =>
+          item.isAvailable &&
+          item.stockCount > 0 &&
+          item.stockCount <= item.lowStockThreshold
+      ).length,
+    [menuItems]
+  );
+
   // Filtered & Sorted Menu Items for Storefront
   const displayedMenuItems = useMemo(() => {
     const list = menuItems.filter((item) => {
-      if (selectedCategory !== 'ALL' && item.category !== selectedCategory) {
+      if (selectedCategory === 'LOW_STOCK') {
+        const isLow =
+          item.isAvailable &&
+          item.stockCount > 0 &&
+          item.stockCount <= item.lowStockThreshold;
+        if (!isLow) return false;
+      } else if (
+        selectedCategory !== 'ALL' &&
+        item.category !== selectedCategory
+      ) {
         return false;
       }
       if (searchTerm.trim()) {
@@ -749,7 +772,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#18181B]">
       {/* Strict Top Bar Contract: 3 Zones (Single-element Brand, 4 Nav Links, 2 Primary Actions) */}
       <header className="sticky top-0 z-40 h-16 bg-[#FAF8F5]/95 backdrop-blur-xs border-b border-[#E5E0D5] px-6 flex items-center justify-between">
-        {/* Zone 1: Single text element wordmark */}
+        {/* Zone 1: Brand lockup with generated minimalist logo */}
         <a
           href="#top"
           onClick={(e) => {
@@ -757,9 +780,16 @@ export default function App() {
             setActiveView('STOREFRONT');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="font-display text-xl font-bold tracking-tight text-[#18181B] whitespace-nowrap"
+          className="flex items-center gap-2.5 font-display text-xl font-bold tracking-tight text-[#18181B] whitespace-nowrap"
         >
-          Cheran Foods
+          <span className="w-9 h-9 rounded-lg overflow-hidden border border-[#E5E0D5] bg-[#FAF8F5] shrink-0 flex items-center justify-center">
+            <ProductImage
+              imageKey="logo"
+              alt="Cheran Foods Logo"
+              className="w-full h-full object-cover"
+            />
+          </span>
+          <span>Cheran Foods</span>
         </a>
 
         {/* Zone 2: 4 Clean Navigation Links */}
@@ -1027,21 +1057,33 @@ export default function App() {
                         { key: 'Cups', label: 'Cups' },
                         { key: 'Cones', label: 'Cones' },
                         { key: 'Ice Cream Balls', label: 'Balls' },
+                        {
+                          key: 'LOW_STOCK',
+                          label: `Selling Fast (${lowStockItemsCount})`,
+                        },
                       ] as const
-                    ).map((tab) => (
-                      <button
-                        key={tab.key}
-                        type="button"
-                        onClick={() => setSelectedCategory(tab.key)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors cursor-pointer ${
-                          selectedCategory === tab.key
-                            ? 'bg-[#FAF8F5] text-[#18181B] shadow-xs'
-                            : 'text-[#57534E] hover:text-[#18181B]'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
+                    ).map((tab) => {
+                      const isLowTab = tab.key === 'LOW_STOCK';
+                      const active = selectedCategory === tab.key;
+                      return (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setSelectedCategory(tab.key)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors cursor-pointer ${
+                            active
+                              ? isLowTab
+                                ? 'bg-[#DC2626] text-white shadow-xs'
+                                : 'bg-[#FAF8F5] text-[#18181B] shadow-xs'
+                              : isLowTab
+                              ? 'text-[#DC2626] hover:bg-[#FEE2E2]/60 font-semibold'
+                              : 'text-[#57534E] hover:text-[#18181B]'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <div className="relative">
@@ -1076,7 +1118,7 @@ export default function App() {
               {displayedMenuItems.length === 0 ? (
                 <div className="py-14 text-center border border-dashed border-[#D6D0C4] rounded-xl space-y-2">
                   <p className="text-sm font-medium text-[#18181B]">
-                    No ice cream items match “{searchTerm}”
+                    No ice cream items match your current filter
                   </p>
                   <button
                     type="button"
@@ -1097,15 +1139,35 @@ export default function App() {
                       !isSoldOut && item.stockCount <= item.lowStockThreshold;
                     const isRecentlyAdded = recentlyAddedId === item.id;
                     const inCartEntry = cart.find((c) => c.item.id === item.id);
+                    const stockPercent =
+                      item.lowStockThreshold > 0
+                        ? Math.min(
+                            100,
+                            Math.max(
+                              12,
+                              Math.round(
+                                (item.stockCount / item.lowStockThreshold) * 100
+                              )
+                            )
+                          )
+                        : 50;
 
                     return (
                       <article
                         key={item.id}
-                        className="group rounded-xl border border-[#E5E0D5] bg-[#FAF8F5] overflow-hidden flex flex-col justify-between transition-transform duration-150 hover:-translate-y-[2px]"
+                        className={`group rounded-xl border overflow-hidden flex flex-col justify-between transition-transform duration-150 hover:-translate-y-[2px] ${
+                          isLowStock
+                            ? 'border-[#DC2626] bg-[#FEF2F2]/45 ring-1 ring-[#DC2626]/20'
+                            : 'border-[#E5E0D5] bg-[#FAF8F5]'
+                        }`}
                       >
                         <div>
                           {/* 4:3 Product Image (65%-75% visual lead) */}
-                          <div className="aspect-[4/3] w-full bg-[#F3EFE6] overflow-hidden border-b border-[#E5E0D5]">
+                          <div
+                            className={`aspect-[4/3] w-full bg-[#F3EFE6] overflow-hidden border-b ${
+                              isLowStock ? 'border-[#DC2626]/30' : 'border-[#E5E0D5]'
+                            }`}
+                          >
                             <ProductImage
                               imageKey={item.imageKey}
                               alt={`${item.name} - ${item.flavor}`}
@@ -1127,26 +1189,41 @@ export default function App() {
                                 <span className="truncate">{item.flavor}</span>
                               </div>
                               <span
-                                className={`font-mono tabular-nums shrink-0 ${
+                                className={`font-mono tabular-nums shrink-0 flex items-center gap-1 ${
                                   isSoldOut
-                                    ? 'text-[#DC2626] font-medium'
+                                    ? 'text-[#78716C] line-through'
                                     : isLowStock
-                                    ? 'text-[#D97706] font-medium'
+                                    ? 'text-[#DC2626] font-semibold'
                                     : 'text-[#57534E]'
                                 }`}
                               >
-                                {isSoldOut
-                                  ? 'Sold Out'
-                                  : `${item.stockCount} in stock`}
+                                {isSoldOut ? (
+                                  <span>Sold Out</span>
+                                ) : isLowStock ? (
+                                  <>
+                                    <AlertTriangle className="w-3.5 h-3.5 text-[#DC2626] shrink-0" />
+                                    <span>Only {item.stockCount} left!</span>
+                                  </>
+                                ) : (
+                                  <span>{item.stockCount} in stock</span>
+                                )}
                               </span>
                             </div>
 
                             {/* Title & Tabular INR Price */}
                             <div className="flex items-baseline justify-between gap-3">
-                              <h3 className="text-base font-semibold text-[#18181B]">
+                              <h3
+                                className={`text-base font-semibold ${
+                                  isLowStock ? 'text-[#991B1B]' : 'text-[#18181B]'
+                                }`}
+                              >
                                 {item.name}
                               </h3>
-                              <span className="text-lg font-mono tabular-nums font-semibold text-[#18181B] shrink-0">
+                              <span
+                                className={`text-lg font-mono tabular-nums font-semibold shrink-0 ${
+                                  isLowStock ? 'text-[#DC2626]' : 'text-[#18181B]'
+                                }`}
+                              >
                                 ₹{item.priceInr}
                               </span>
                             </div>
@@ -1154,12 +1231,34 @@ export default function App() {
                             <p className="text-xs text-[#57534E] leading-relaxed line-clamp-2">
                               {item.description}
                             </p>
+
+                            {/* Low-Stock Urgency Bar when stock drops below lowStockThreshold */}
+                            {isLowStock && (
+                              <div className="pt-1.5 space-y-1">
+                                <div className="flex items-center justify-between text-[11px] font-medium text-[#DC2626]">
+                                  <span>Low Stock · Selling Fast</span>
+                                  <span className="font-mono tabular-nums">
+                                    {item.stockCount} / {item.lowStockThreshold} threshold
+                                  </span>
+                                </div>
+                                <div className="w-full h-1.5 bg-[#FECACA] rounded-xs overflow-hidden">
+                                  <div
+                                    className="h-full bg-[#DC2626] transition-all duration-200"
+                                    style={{ width: `${stockPercent}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         {/* Card Footer Action */}
                         <div className="px-5 pb-5 pt-2 flex items-center justify-between gap-3">
-                          <span className="text-xs font-mono tabular-nums text-[#78716C]">
+                          <span
+                            className={`text-xs font-mono tabular-nums ${
+                              isLowStock ? 'text-[#991B1B] font-medium' : 'text-[#78716C]'
+                            }`}
+                          >
                             {item.unitLabel}
                             {inCartEntry ? ` · ${inCartEntry.quantity} in tray` : ''}
                           </span>
@@ -1173,6 +1272,8 @@ export default function App() {
                                 ? 'bg-[#E5E0D5] text-[#78716C] cursor-not-allowed'
                                 : isRecentlyAdded
                                 ? 'bg-[#15803D] text-white'
+                                : isLowStock
+                                ? 'bg-[#DC2626] text-white hover:bg-[#B91C1C]'
                                 : 'bg-[#18181B] text-[#FAF8F5] hover:bg-[#C2410C]'
                             }`}
                           >
@@ -1183,6 +1284,8 @@ export default function App() {
                               </>
                             ) : isSoldOut ? (
                               <span>Out of Stock</span>
+                            ) : isLowStock ? (
+                              <span>Grab Now · ₹{item.priceInr}</span>
                             ) : (
                               <span>Add to Tray · ₹{item.priceInr}</span>
                             )}

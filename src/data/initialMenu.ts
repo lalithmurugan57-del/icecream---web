@@ -81,7 +81,11 @@ export const BLUEPRINT_CONSTRAINTS = {
   BOOTSTRAPPED_ADMIN_EMAIL: 'lalithmurugan57@gmail.com',
 } as const;
 
-export const PRODUCT_IMAGES: Record<'hero' | 'sticks' | 'bars' | 'cones' | 'balls', string> = {
+export const PRODUCT_IMAGES: Record<'logo' | 'hero' | 'sticks' | 'bars' | 'cones' | 'balls', string> = {
+  logo: resolveAssetImage(
+    'cheran_foods_logo_1791261882165.jpg',
+    '/src/assets/images/cheran_foods_logo_1791261882165.jpg'
+  ),
   hero: resolveAssetImage(
     'hero_cheran_icecream_1791217593477.jpg',
     '/src/assets/images/hero_cheran_icecream_1791217593477.jpg'
@@ -168,7 +172,7 @@ export const INITIAL_MENU_ITEMS: MenuItemData[] = [
     flavor: 'Alphonso Mango Duet',
     description: 'Luscious Alphonso mango pulp jacket wrapped around a sweet dairy cream center.',
     priceInr: 20,
-    stockCount: 85,
+    stockCount: 12,
     lowStockThreshold: 20,
     unitLabel: '75ml bar',
     imageKey: 'bars',
@@ -210,7 +214,7 @@ export const INITIAL_MENU_ITEMS: MenuItemData[] = [
     flavor: 'Chocolate',
     description: 'Crunchy waffle cone loaded with rich Belgian dark Chocolate ice cream and fudge drizzle.',
     priceInr: 50,
-    stockCount: 58,
+    stockCount: 9,
     lowStockThreshold: 15,
     unitLabel: '120ml cone',
     imageKey: 'cones',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Plus, ShoppingBag } from 'lucide-react';
+import { AlertTriangle, Check, ShoppingBag } from 'lucide-react';
 import { MenuItemData } from '../data/initialMenu';
 import { ProductImage } from './ProductImage';
 
@@ -85,6 +85,7 @@ export const ConeBarConfigurator: React.FC<ConeBarConfiguratorProps> = ({
               {coneItems.map((cone) => {
                 const selected = cone.id === activeCone.id;
                 const soldOut = !cone.isAvailable || cone.stockCount <= 0;
+                const lowStock = !soldOut && cone.stockCount <= cone.lowStockThreshold;
                 return (
                   <button
                     key={cone.id}
@@ -95,7 +96,11 @@ export const ConeBarConfigurator: React.FC<ConeBarConfiguratorProps> = ({
                     }}
                     className={`text-left p-3.5 rounded-lg border transition-colors cursor-pointer ${
                       selected
-                        ? 'bg-[#18181B] text-[#FAF8F5] border-[#18181B]'
+                        ? lowStock
+                          ? 'bg-[#DC2626] text-white border-[#DC2626]'
+                          : 'bg-[#18181B] text-[#FAF8F5] border-[#18181B]'
+                        : lowStock
+                        ? 'bg-[#FEF2F2] text-[#991B1B] border-[#DC2626] hover:bg-[#FEE2E2]'
                         : 'bg-[#FAF8F5] text-[#18181B] border-[#DFD9CE] hover:border-[#18181B]/40'
                     }`}
                   >
@@ -105,18 +110,39 @@ export const ConeBarConfigurator: React.FC<ConeBarConfiguratorProps> = ({
                       </span>
                       <span
                         className={`text-sm font-mono tabular-nums font-semibold ${
-                          selected ? 'text-[#FDBA74]' : 'text-[#C2410C]'
+                          selected
+                            ? lowStock
+                              ? 'text-white'
+                              : 'text-[#FDBA74]'
+                            : lowStock
+                            ? 'text-[#DC2626]'
+                            : 'text-[#C2410C]'
                         }`}
                       >
                         ₹{cone.priceInr}
                       </span>
                     </div>
                     <div
-                      className={`text-xs mt-1 font-mono tabular-nums ${
-                        selected ? 'text-[#D6D3D1]' : 'text-[#78716C]'
+                      className={`text-xs mt-1 font-mono tabular-nums flex items-center gap-1 ${
+                        selected
+                          ? lowStock
+                            ? 'text-[#FEE2E2] font-semibold'
+                            : 'text-[#D6D3D1]'
+                          : lowStock
+                          ? 'text-[#DC2626] font-semibold'
+                          : 'text-[#78716C]'
                       }`}
                     >
-                      {soldOut ? 'Out of stock' : `${cone.stockCount} cones in stock`}
+                      {soldOut ? (
+                        <span>Out of stock</span>
+                      ) : lowStock ? (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Low Stock · Only {cone.stockCount} left!</span>
+                        </>
+                      ) : (
+                        <span>{cone.stockCount} cones in stock</span>
+                      )}
                     </div>
                   </button>
                 );

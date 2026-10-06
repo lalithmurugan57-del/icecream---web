@@ -3,7 +3,7 @@ import { IceCreamCone } from 'lucide-react';
 import { PRODUCT_IMAGES } from '../data/initialMenu';
 
 interface ProductImageProps {
-  imageKey: 'hero' | 'sticks' | 'bars' | 'cones' | 'balls';
+  imageKey: 'logo' | 'hero' | 'sticks' | 'bars' | 'cones' | 'balls';
   alt: string;
   title?: string;
   subtitle?: string;
