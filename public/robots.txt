@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /#/admin
 
-Sitemap: /sitemap.xml
+Sitemap: https://lalithmurugan57-del.github.io/icecream---web/sitemap.xml

@@ -1011,33 +1011,12 @@ export default function App() {
           <button
             type="button"
             onClick={navigateToAdminPortal}
-            className="h-9 px-3 rounded-lg border border-[#D6D0C4] bg-[#FAF8F5] text-xs font-medium text-[#18181B] hover:bg-[#EFECE6] flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
+            className="h-9 px-3.5 rounded-lg border border-[#D6D0C4] bg-[#FAF8F5] text-xs font-semibold text-[#18181B] hover:bg-[#EFECE6] flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
             title="Open Separate Password-Protected Admin Portal"
           >
             <Lock className="w-3.5 h-3.5 text-[#C2410C]" />
             <span>Admin Login</span>
           </button>
-
-          {currentUser ? (
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="h-9 px-3 rounded-lg border border-[#D6D0C4] text-xs font-medium text-[#57534E] hover:text-[#18181B] hover:bg-[#EFECE6] flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
-              title={`Signed in as ${currentUser.email}`}
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleSignIn}
-              className="hidden sm:flex h-9 px-3 rounded-lg border border-[#D6D0C4] text-xs font-medium text-[#18181B] hover:bg-[#EFECE6] items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
-            >
-              <LogIn className="w-3.5 h-3.5 text-[#C2410C]" />
-              <span>Google Sign In</span>
-            </button>
-          )}
 
           <button
             type="button"
