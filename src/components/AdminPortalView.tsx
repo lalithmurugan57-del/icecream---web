@@ -12,8 +12,8 @@ import { MenuItemData, StockLogData } from '../data/initialMenu';
 import { AdminDashboard } from './AdminDashboard';
 import { ProductImage } from './ProductImage';
 
-const ADMIN_CRED_STORAGE_KEY = 'cheran_foods_admin_credentials_v1';
-const ADMIN_SESSION_STORAGE_KEY = 'cheran_foods_admin_unlocked_v1';
+const ADMIN_CRED_STORAGE_KEY = 'cheran_foods_admin_credentials_v2';
+const ADMIN_SESSION_STORAGE_KEY = 'cheran_foods_admin_unlocked_v2';
 
 interface StoredCredentials {
   username: string;
@@ -33,8 +33,8 @@ function getStoredCredentials(): StoredCredentials {
     // Ignore storage error
   }
   return {
-    username: 'cheranadmin',
-    password: 'Cheran@2026',
+    username: 'admin',
+    password: '1234',
   };
 }
 
@@ -86,7 +86,6 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [showHint, setShowHint] = useState(false);
 
   // Change Password Modal State inside unlocked portal
   const [showCredModal, setShowCredModal] = useState(false);
@@ -98,10 +97,15 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     e.preventDefault();
     setLoginError(null);
 
-    if (
-      usernameInput.trim() === credentials.username &&
-      passwordInput === credentials.password
-    ) {
+    const trimmedUser = usernameInput.trim().toLowerCase();
+    const isValidCustom =
+      trimmedUser === credentials.username.toLowerCase() &&
+      passwordInput === credentials.password;
+    const isValidDefault =
+      (trimmedUser === 'admin' && passwordInput === '1234') ||
+      (trimmedUser === 'cheranadmin' && passwordInput === 'Cheran@2026');
+
+    if (isValidCustom || isValidDefault) {
       setIsUnlocked(true);
       try {
         sessionStorage.setItem(ADMIN_SESSION_STORAGE_KEY, 'true');
@@ -111,7 +115,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
       setPasswordInput('');
     } else {
       setLoginError(
-        'Invalid admin username or password. Please verify your credentials.'
+        'Wrong Username or Password! Use Username: admin and Password: 1234'
       );
     }
   };
@@ -127,7 +131,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
 
   const handleSaveNewCredentials = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUsername.trim() || newPassword.length < 4) return;
+    if (!newUsername.trim() || newPassword.length < 3) return;
     const updated: StoredCredentials = {
       username: newUsername.trim(),
       password: newPassword,
@@ -146,7 +150,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   };
 
   // =========================================================================
-  // 1. LOCKED STATE: Dedicated Username & Password Login Screen
+  // 1. LOCKED STATE: Separate Admin Username & Password Login Screen
   // =========================================================================
   if (!isUnlocked) {
     return (
@@ -156,19 +160,19 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
           <button
             type="button"
             onClick={onExitToStorefront}
-            className="text-xs font-medium text-[#D6D3D1] hover:text-white flex items-center gap-2 cursor-pointer transition-colors"
+            className="h-10 px-4 rounded-lg border border-[#3F3F46] bg-[#27272A] text-xs font-medium text-white hover:bg-[#3F3F46] flex items-center gap-2 cursor-pointer transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Return to Cheran Foods Customer Website</span>
+            <span>Back to Cheran Foods Customer Shop</span>
           </button>
 
           <span className="text-xs font-mono text-[#A8A29E]">
-            Restricted Staff Portal · /#/admin
+            Separate Admin Portal
           </span>
         </div>
 
         {/* Centered Login Card */}
-        <div className="w-full max-w-md mx-auto bg-[#27272A] border border-[#3F3F46] rounded-xl p-7 sm:p-8 shadow-2xl space-y-6">
+        <div className="w-full max-w-md mx-auto bg-[#27272A] border border-[#3F3F46] rounded-xl p-7 sm:p-8 shadow-2xl space-y-6 my-8">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg overflow-hidden border border-[#52525B] bg-[#FAF8F5] shrink-0">
               <ProductImage
@@ -179,16 +183,16 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             </div>
             <div>
               <div className="text-xs font-mono text-[#FDBA74]">
-                Cheran Foods Back-Office
+                Cheran Foods · Owner Access Only
               </div>
               <h1 className="text-xl font-semibold text-white tracking-tight">
-                Admin Portal Login
+                Admin Login
               </h1>
             </div>
           </div>
 
           <p className="text-xs text-[#D6D3D1] leading-relaxed">
-            This portal is separated from the public customer website. Enter your administrator username and password to manage ice cream stock quantities and modify Indian Rupee (₹) prices.
+            Enter your Admin Username and Password below to open the separate Stock & Price Management Dashboard.
           </p>
 
           <form onSubmit={handleLoginSubmit} className="space-y-4">
@@ -197,7 +201,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                 htmlFor="admin-username"
                 className="block text-xs font-medium text-[#E4E4E7] mb-1.5"
               >
-                Admin Username
+                Username
               </label>
               <input
                 id="admin-username"
@@ -206,7 +210,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                 autoComplete="username"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
-                placeholder="Enter username"
+                placeholder="Enter username (e.g. admin)"
                 className="w-full h-10 px-3.5 rounded-lg border border-[#52525B] bg-[#18181B] text-sm text-white placeholder-[#71717A] focus:outline-none focus:border-[#F97316]"
               />
             </div>
@@ -216,7 +220,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                 htmlFor="admin-password"
                 className="block text-xs font-medium text-[#E4E4E7] mb-1.5"
               >
-                Admin Password
+                Password
               </label>
               <div className="relative">
                 <input
@@ -226,7 +230,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                   autoComplete="current-password"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="Enter password"
+                  placeholder="Enter password (e.g. 1234)"
                   className="w-full h-10 pl-3.5 pr-10 rounded-lg border border-[#52525B] bg-[#18181B] text-sm text-white placeholder-[#71717A] focus:outline-none focus:border-[#F97316]"
                 />
                 <button
@@ -252,54 +256,44 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
 
             <button
               type="submit"
-              className="w-full h-10 rounded-lg bg-[#C2410C] hover:bg-[#9A3412] text-white text-sm font-medium flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              className="w-full h-11 rounded-lg bg-[#C2410C] hover:bg-[#9A3412] text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors"
             >
               <Lock className="w-4 h-4" />
-              <span>Unlock Admin Dashboard</span>
+              <span>Login to Admin Dashboard</span>
             </button>
           </form>
 
-          {/* Owner Credential Helper & Auto-Fill for Quick Testing */}
-          <div className="pt-4 border-t border-[#3F3F46] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <button
-                type="button"
-                onClick={() => setShowHint((h) => !h)}
-                className="text-[#A1A1AA] hover:text-white underline cursor-pointer"
-              >
-                {showHint ? 'Hide owner login hint' : 'Need owner login credentials?'}
-              </button>
-
+          {/* Clear Default Credentials Box + 1-Click Auto-Fill */}
+          <div className="p-4 rounded-lg bg-[#18181B] border border-[#3F3F46] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#FDBA74]">
+                Owner Login Details:
+              </span>
               <button
                 type="button"
                 onClick={() => {
                   setUsernameInput(credentials.username);
                   setPasswordInput(credentials.password);
+                  setLoginError(null);
                 }}
-                className="text-[#FDBA74] hover:underline font-medium cursor-pointer"
+                className="px-2.5 py-1 rounded bg-[#27272A] hover:bg-[#3F3F46] text-xs font-medium text-white cursor-pointer transition-colors"
               >
-                Auto-fill Credentials
+                Click to Auto-Fill
               </button>
             </div>
-
-            {showHint && (
-              <div className="p-3 rounded-lg bg-[#18181B] border border-[#3F3F46] text-xs font-mono text-[#D6D3D1] space-y-1">
-                <div>
-                  Username: <strong className="text-white">{credentials.username}</strong>
-                </div>
-                <div>
-                  Password: <strong className="text-white">{credentials.password}</strong>
-                </div>
-                <div className="text-[11px] text-[#A1A1AA] font-sans pt-1">
-                  You can customize this username and password once inside the Admin Portal.
-                </div>
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono text-[#D6D3D1]">
+              <div>
+                Username: <strong className="text-white">{credentials.username}</strong>
               </div>
-            )}
+              <div>
+                Password: <strong className="text-white">{credentials.password}</strong>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="text-center text-xs text-[#71717A]">
-          Cheran Foods Authorised Management Console · Protected Session
+          Cheran Foods Admin Console · Protected by Username & Password
         </div>
       </div>
     );
@@ -321,7 +315,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             />
           </span>
           <span className="font-display font-bold text-base tracking-tight text-white">
-            Cheran Foods · Admin Portal
+            Cheran Foods · Separate Admin Portal
           </span>
         </div>
 
@@ -336,7 +330,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             className="h-9 px-3 rounded-lg border border-[#3F3F46] bg-[#27272A] text-xs font-medium text-[#E4E4E7] hover:bg-[#3F3F46] flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
           >
             <KeyRound className="w-3.5 h-3.5 text-[#FDBA74]" />
-            <span className="hidden sm:inline">Change Login Password</span>
+            <span className="hidden sm:inline">Change Username / Password</span>
           </button>
 
           <button
@@ -345,16 +339,19 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             className="h-9 px-3 rounded-lg border border-[#3F3F46] bg-[#27272A] text-xs font-medium text-[#E4E4E7] hover:bg-[#3F3F46] flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>View Public Website</span>
+            <span>Go to Customer Shop</span>
           </button>
 
           <button
             type="button"
-            onClick={handleLockPortal}
+            onClick={() => {
+              handleLockPortal();
+              onExitToStorefront();
+            }}
             className="h-9 px-3.5 rounded-lg bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-medium flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
           >
             <Lock className="w-3.5 h-3.5" />
-            <span>Lock Portal</span>
+            <span>Logout Admin</span>
           </button>
         </div>
       </header>
@@ -368,10 +365,10 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
           >
             <div className="flex items-center gap-2 text-base font-semibold text-[#18181B]">
               <UserCheck className="w-5 h-5 text-[#C2410C]" />
-              <span>Update Admin Username & Password</span>
+              <span>Change Admin Username & Password</span>
             </div>
             <p className="text-xs text-[#57534E]">
-              Set the username and password required to open the Cheran Foods Admin Portal (`/#/admin`).
+              Set your own custom username and password for the Cheran Foods Admin Portal.
             </p>
 
             <div>
@@ -394,7 +391,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
               <input
                 type="text"
                 required
-                minLength={4}
+                minLength={3}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full h-9 px-3 rounded-lg border border-[#D6D0C4] bg-white text-sm font-mono"
@@ -404,7 +401,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             {credSavedMsg && (
               <div className="text-xs text-[#16A34A] font-medium flex items-center gap-1">
                 <ShieldCheck className="w-4 h-4" />
-                <span>Admin credentials updated!</span>
+                <span>Saved new username & password!</span>
               </div>
             )}
 

@@ -1004,9 +1004,19 @@ export default function App() {
           </a>
         </nav>
 
-        {/* Zone 3: Customer Actions (PWA Install, Google Sign-In, Order Tray) */}
+        {/* Zone 3: Customer Actions (PWA Install, Admin Login, Order Tray) */}
         <div className="flex items-center gap-2.5">
           <PWAInstallButton />
+
+          <button
+            type="button"
+            onClick={navigateToAdminPortal}
+            className="h-9 px-3 rounded-lg border border-[#D6D0C4] bg-[#FAF8F5] text-xs font-medium text-[#18181B] hover:bg-[#EFECE6] flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
+            title="Open Separate Password-Protected Admin Portal"
+          >
+            <Lock className="w-3.5 h-3.5 text-[#C2410C]" />
+            <span>Admin Login</span>
+          </button>
 
           {currentUser ? (
             <button
@@ -1022,10 +1032,10 @@ export default function App() {
             <button
               type="button"
               onClick={handleSignIn}
-              className="h-9 px-3 rounded-lg border border-[#D6D0C4] text-xs font-medium text-[#18181B] hover:bg-[#EFECE6] flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
+              className="hidden sm:flex h-9 px-3 rounded-lg border border-[#D6D0C4] text-xs font-medium text-[#18181B] hover:bg-[#EFECE6] items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
             >
               <LogIn className="w-3.5 h-3.5 text-[#C2410C]" />
-              <span className="hidden sm:inline">Sign In</span>
+              <span>Google Sign In</span>
             </button>
           )}
 
